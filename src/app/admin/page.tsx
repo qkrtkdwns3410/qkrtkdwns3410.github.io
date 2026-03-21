@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { listPosts, deletePost } from "@/lib/github";
 import { getGithubPat, setAuthState, clearGithubPat } from "@/lib/auth";
-import Link from "next/link";
+import { CacheBustLink as Link } from "@/components/CacheBustLink";
 import {
   Plus,
   Pencil,

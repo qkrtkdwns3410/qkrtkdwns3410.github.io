@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { CacheBustLink as Link } from "./CacheBustLink";
 import { Post } from "@/lib/types";
 import { BookOpen, ChevronRight } from "lucide-react";
 

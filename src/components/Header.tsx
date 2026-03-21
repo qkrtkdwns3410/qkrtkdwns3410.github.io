@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { CacheBustLink as Link } from "./CacheBustLink";
 import { Settings } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 

@@ -22,14 +22,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" suppressHydrationWarning>
-      <head>
-        {/* 새 빌드 배포 시 브라우저 캐시를 무효화하고 최신 페이지로 자동 새로고침 */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var b="${process.env.NEXT_PUBLIC_BUILD_TIME}";var k="blog_build";var s=localStorage.getItem(k);if(s&&s!==b&&!window.location.search.includes("v="+b)){localStorage.setItem(k,b);window.location.replace(window.location.pathname+"?v="+b)}else{localStorage.setItem(k,b)}})()`,
-          }}
-        />
-      </head>
       <body className="min-h-screen antialiased">
         <ThemeProvider>
           <Header />

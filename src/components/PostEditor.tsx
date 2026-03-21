@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Save, ArrowLeft, Tag, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { CacheBustLink as Link } from "./CacheBustLink";
 import { getGithubPat } from "@/lib/auth";
 import { getPost, createPost, updatePost } from "@/lib/github";
 

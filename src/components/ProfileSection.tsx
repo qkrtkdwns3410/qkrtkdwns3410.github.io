@@ -2,7 +2,7 @@
 
 import { siteConfig } from "@/lib/config";
 import { Mail, Github, Globe, Settings } from "lucide-react";
-import Link from "next/link";
+import { CacheBustLink as Link } from "./CacheBustLink";
 
 interface ProfileSectionProps {
   postCount: number;
