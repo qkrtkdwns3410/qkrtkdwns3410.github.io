@@ -2,6 +2,12 @@ const REPO_OWNER = "qkrtkdwns3410";
 const REPO_NAME = "qkrtkdwns3410.github.io";
 const POSTS_PATH = "src/content/posts";
 
+function decodeBase64Utf8(base64: string): string {
+  const binary = atob(base64.replace(/\n/g, ""));
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder("utf-8").decode(bytes);
+}
+
 interface GithubFileResponse {
   name: string;
   path: string;
@@ -52,10 +58,10 @@ export async function getPost(
     const resMd = await githubApi(`${POSTS_PATH}/${slug}.md`, pat);
     if (!resMd.ok) throw new Error("Post not found");
     const data: GithubFileResponse = await resMd.json();
-    return { content: atob(data.content), sha: data.sha };
+    return { content: decodeBase64Utf8(data.content), sha: data.sha };
   }
   const data: GithubFileResponse = await res.json();
-  return { content: atob(data.content), sha: data.sha };
+  return { content: decodeBase64Utf8(data.content), sha: data.sha };
 }
 
 export async function createPost(
