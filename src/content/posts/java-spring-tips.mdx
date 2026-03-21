@@ -1,0 +1,56 @@
+---
+title: "Spring Boot 개발 팁 모음"
+description: "Spring Boot 개발 시 유용한 팁들을 정리했습니다."
+date: "2024-03-20"
+tags: ["Java", "Spring", "Spring Boot"]
+series: "Spring 시리즈"
+---
+
+## Spring Boot 개발 팁
+
+Spring Boot로 개발할 때 알아두면 좋은 팁들을 모아봤습니다.
+
+### 1. Profile 활용하기
+
+```yaml
+# application-dev.yml
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+```
+
+개발 환경과 운영 환경의 설정을 분리하여 관리할 수 있습니다.
+
+### 2. @ConfigurationProperties 사용하기
+
+```java
+@ConfigurationProperties(prefix = "app")
+public record AppProperties(
+    String name,
+    String version,
+    Security security
+) {
+    public record Security(String secretKey, long tokenExpiry) {}
+}
+```
+
+타입 안전하게 설정값을 관리할 수 있습니다.
+
+### 3. 커스텀 예외 처리
+
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(
+        BusinessException e
+    ) {
+        return ResponseEntity
+            .status(e.getHttpStatus())
+            .body(new ErrorResponse(e.getMessage()));
+    }
+}
+```
+
+전역 예외 처리기를 통해 일관된 에러 응답을 반환할 수 있습니다.
