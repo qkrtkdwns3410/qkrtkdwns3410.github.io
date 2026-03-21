@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { listPosts, deletePost } from "@/lib/github";
-import { getGithubPat } from "@/lib/auth";
+import { getGithubPat, setAuthState, clearGithubPat } from "@/lib/auth";
 import Link from "next/link";
 import {
   Plus,
@@ -14,7 +14,6 @@ import {
   Loader2,
   LogOut,
 } from "lucide-react";
-import { setAuthState, clearGithubPat } from "@/lib/auth";
 
 interface PostItem {
   name: string;
@@ -32,7 +31,11 @@ function AdminDashboard() {
     setLoading(true);
     setError("");
     try {
-      const pat = getGithubPat()!;
+      const pat = getGithubPat();
+      if (!pat) {
+        setError("GitHub PAT가 설정되지 않았습니다. 다시 로그인해주세요.");
+        return;
+      }
       const items = await listPosts(pat);
       setPosts(items);
     } catch {
@@ -52,7 +55,11 @@ function AdminDashboard() {
 
     setDeleting(slug);
     try {
-      const pat = getGithubPat()!;
+      const pat = getGithubPat();
+      if (!pat) {
+        alert("GitHub PAT가 설정되지 않았습니다.");
+        return;
+      }
       await deletePost(slug, post.sha, pat);
       setPosts((prev) => prev.filter((p) => p.name !== post.name));
     } catch {

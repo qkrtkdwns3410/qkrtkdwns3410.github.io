@@ -1,6 +1,7 @@
 const ADMIN_ID = process.env.NEXT_PUBLIC_ADMIN_ID || "";
 const ADMIN_PW_HASH = process.env.NEXT_PUBLIC_ADMIN_PW_HASH || "";
 
+// 브라우저 Web Crypto API를 사용한 SHA-256 해싱 (서버 런타임 없이 동작)
 export async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(password);

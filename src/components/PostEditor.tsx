@@ -17,7 +17,7 @@ interface PostEditorProps {
 
 function parseFrontmatter(raw: string) {
   const match = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
-  if (!match) return { title: "", description: "", tags: "", series: "", body: raw };
+  if (!match) return { title: "", description: "", tags: "", series: "", date: "", body: raw };
 
   const meta = match[1];
   const body = match[2];
@@ -35,6 +35,7 @@ function parseFrontmatter(raw: string) {
   return {
     title: get("title"),
     description: get("description"),
+    date: get("date"),
     tags,
     series: get("series"),
     body: body.trim(),
@@ -48,6 +49,8 @@ export function PostEditor({ mode, slug }: PostEditorProps) {
   const [tags, setTags] = useState("");
   const [series, setSeries] = useState("");
   const [content, setContent] = useState("");
+  // 수정 모드에서 원래 발행일을 보존하기 위한 상태
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [sha, setSha] = useState("");
   const [loading, setLoading] = useState(mode === "edit");
   const [saving, setSaving] = useState(false);
@@ -66,6 +69,8 @@ export function PostEditor({ mode, slug }: PostEditorProps) {
           setTags(parsed.tags);
           setSeries(parsed.series);
           setContent(parsed.body);
+          // 원래 발행일이 있으면 보존, 없으면 오늘 날짜 사용
+          if (parsed.date) setDate(parsed.date);
           setSha(sha);
         })
         .catch(() => setError("글을 불러오는데 실패했습니다."))
@@ -73,8 +78,8 @@ export function PostEditor({ mode, slug }: PostEditorProps) {
     }
   }, [mode, slug]);
 
+  // MDX frontmatter를 조립하여 최종 파일 콘텐츠를 생성
   const buildMdx = (body: string) => {
-    const date = new Date().toISOString().split("T")[0];
     const tagList = tags
       .split(",")
       .map((t) => `"${t.trim()}"`)
@@ -109,12 +114,15 @@ export function PostEditor({ mode, slug }: PostEditorProps) {
     setError("");
 
     try {
+      // 슬러그는 ASCII만 사용 (한글 URL은 GitHub Pages에서 이중 인코딩 문제 발생)
+      // 영문/숫자만 추출하고, 한글만 있는 제목은 날짜 기반 슬러그 생성
+      const asciiSlug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
       const fileSlug =
         slug ||
-        title
-          .toLowerCase()
-          .replace(/[^a-z0-9가-힣ㄱ-ㅎㅏ-ㅣ]+/g, "-")
-          .replace(/^-|-$/g, "");
+        (asciiSlug || `post-${Date.now()}`);
 
       const mdx = buildMdx(content);
 
@@ -235,8 +243,8 @@ export function PostEditor({ mode, slug }: PostEditorProps) {
         className="w-full text-3xl sm:text-4xl font-extrabold bg-transparent border-none outline-none placeholder:text-muted-foreground/40 mb-6"
       />
 
-      {/* Editor */}
-      <div className="min-h-[60vh] rounded-xl border overflow-hidden">
+      {/* Editor - 노션처럼 테두리 없이 자연스럽게 작성 */}
+      <div className="min-h-[60vh]">
         <Editor onChange={setContent} initialContent={content} />
       </div>
     </div>

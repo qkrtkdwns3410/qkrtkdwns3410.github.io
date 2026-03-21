@@ -9,7 +9,7 @@ interface PageProps {
 
 export async function generateStaticParams() {
   const series = getAllSeries();
-  return series.map((name) => ({ name: encodeURIComponent(name) }));
+  return series.map((name) => ({ name }));
 }
 
 export async function generateMetadata({ params }: PageProps) {

@@ -2,6 +2,7 @@ const REPO_OWNER = "qkrtkdwns3410";
 const REPO_NAME = "qkrtkdwns3410.github.io";
 const POSTS_PATH = "src/content/posts";
 
+// GitHub API에서 받은 base64 콘텐츠를 UTF-8 문자열로 변환 (한글 깨짐 방지)
 function decodeBase64Utf8(base64: string): string {
   const binary = atob(base64.replace(/\n/g, ""));
   const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
@@ -23,6 +24,7 @@ interface GithubContentItem {
   type: string;
 }
 
+// GitHub Contents API 공통 래퍼 - PAT 인증 헤더를 자동으로 추가
 async function githubApi(
   path: string,
   pat: string,

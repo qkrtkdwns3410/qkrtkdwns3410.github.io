@@ -4,7 +4,7 @@ import { MDXRemote } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import rehypeSlug from "rehype-slug";
-import { Calendar, Clock, ArrowLeft, Pencil } from "lucide-react";
+import { Calendar, Clock, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 interface PageProps {
@@ -43,20 +43,13 @@ export default async function ArticlePage({ params }: PageProps) {
   return (
     <article className="py-10">
       {/* Top bar */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8">
         <Link
           href="/"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           목록으로
-        </Link>
-        <Link
-          href={`/admin/edit/${slug}/`}
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Pencil className="w-3.5 h-3.5" />
-          수정
         </Link>
       </div>
 

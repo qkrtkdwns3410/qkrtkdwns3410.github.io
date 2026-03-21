@@ -6,7 +6,11 @@ import { Post } from "./types";
 
 const postsDirectory = path.join(process.cwd(), "src/content/posts");
 
+// 빌드 시점 캐시 - 정적 익스포트에서 반복적인 파일시스템 읽기 방지
+let _cachedPosts: Post[] | null = null;
+
 export function getAllPosts(): Post[] {
+  if (_cachedPosts) return _cachedPosts;
   if (!fs.existsSync(postsDirectory)) {
     return [];
   }
@@ -34,21 +38,14 @@ export function getAllPosts(): Post[] {
       } as Post;
     });
 
-  return posts.sort(
+  _cachedPosts = posts.sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
+  return _cachedPosts;
 }
 
 export function getPostBySlug(slug: string): Post | undefined {
-  const posts = getAllPosts();
-  return posts.find((post) => post.slug === slug);
-}
-
-export function getAllTags(): string[] {
-  const posts = getAllPosts();
-  const tagSet = new Set<string>();
-  posts.forEach((post) => post.tags.forEach((tag) => tagSet.add(tag)));
-  return Array.from(tagSet).sort();
+  return getAllPosts().find((post) => post.slug === slug);
 }
 
 export function getAllSeries(): string[] {
