@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { AdminGuard } from "@/components/AdminGuard";
 import { listPosts, deletePost } from "@/lib/github";
 import { getGithubPat, setAuthState, clearGithubPat } from "@/lib/auth";
-import { CacheBustLink as Link } from "@/components/CacheBustLink";
+import { CacheBustLink as Link, cacheBustUrl } from "@/components/CacheBustLink";
 import {
   Plus,
   Pencil,
@@ -72,7 +72,7 @@ function AdminDashboard() {
   const handleLogout = () => {
     setAuthState(false);
     clearGithubPat();
-    window.location.href = `/admin/?v=${process.env.NEXT_PUBLIC_BUILD_TIME}`;
+    window.location.href = cacheBustUrl("/admin/");
   };
 
   return (

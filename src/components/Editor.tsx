@@ -56,7 +56,6 @@ export default function Editor({ onChange, initialContent }: EditorProps) {
       <BlockNoteView
         editor={editor}
         theme={resolvedTheme === "dark" ? "dark" : "light"}
-        data-changing-font-demo
         onChange={async () => {
           const markdown = await editor.blocksToMarkdownLossy(editor.document);
           onChange(markdown);
