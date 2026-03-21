@@ -151,7 +151,7 @@ export function PostEditor({ mode, slug }: PostEditorProps) {
   }
 
   return (
-    <div className="py-6">
+    <div className="py-6 flex flex-col min-h-[calc(100vh-8rem)]">
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6">
         <Link
@@ -243,8 +243,8 @@ export function PostEditor({ mode, slug }: PostEditorProps) {
         className="w-full text-3xl sm:text-4xl font-extrabold bg-transparent border-none outline-none placeholder:text-muted-foreground/40 mb-6"
       />
 
-      {/* Editor - 노션처럼 테두리 없이 자연스럽게 작성 */}
-      <div className="min-h-[60vh]">
+      {/* Editor - 노션처럼 화면 전체를 채우는 에디터 영역 */}
+      <div className="flex-1 [&_.bn-container]:h-full [&_.bn-editor]:min-h-full">
         <Editor onChange={setContent} initialContent={content} />
       </div>
     </div>
