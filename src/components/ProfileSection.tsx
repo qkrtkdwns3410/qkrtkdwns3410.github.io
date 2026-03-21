@@ -1,7 +1,8 @@
 "use client";
 
 import { siteConfig } from "@/lib/config";
-import { Mail, Github, Globe } from "lucide-react";
+import { Mail, Github, Globe, Settings } from "lucide-react";
+import Link from "next/link";
 
 interface ProfileSectionProps {
   postCount: number;
@@ -31,7 +32,16 @@ export function ProfileSection({ postCount }: ProfileSectionProps) {
 
         {/* Info */}
         <div className="flex flex-col items-center sm:items-start gap-3">
-          <h1 className="text-2xl font-bold">{siteConfig.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{siteConfig.name}</h1>
+            <Link
+              href="/admin/"
+              className="px-2.5 py-1 text-xs font-medium rounded-md border hover:bg-accent transition-colors text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              <Settings className="w-3 h-3" />
+              관리
+            </Link>
+          </div>
           <p className="text-muted-foreground text-center sm:text-left">
             {siteConfig.bio}
           </p>
