@@ -132,7 +132,7 @@ export function PostEditor({ mode, slug }: PostEditorProps) {
         await createPost(fileSlug, mdx, pat);
       }
 
-      router.push("/admin/");
+      router.push(`/admin/?v=${process.env.NEXT_PUBLIC_BUILD_TIME}`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "저장에 실패했습니다.";
       setError(msg);

@@ -72,7 +72,7 @@ function AdminDashboard() {
   const handleLogout = () => {
     setAuthState(false);
     clearGithubPat();
-    window.location.reload();
+    window.location.href = `/admin/?v=${process.env.NEXT_PUBLIC_BUILD_TIME}`;
   };
 
   return (
