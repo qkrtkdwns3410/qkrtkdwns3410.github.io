@@ -22,6 +22,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko" suppressHydrationWarning>
+      <head>
+        {/* 직접 URL 접속 시에도 ?v=빌드타임스탬프를 붙여 캐시 우회 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var v="${process.env.NEXT_PUBLIC_BUILD_TIME}";if(!window.location.search.includes("v="+v)){window.location.replace(window.location.pathname+"?v="+v+window.location.hash)}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-screen antialiased">
         <ThemeProvider>
           <Header />
