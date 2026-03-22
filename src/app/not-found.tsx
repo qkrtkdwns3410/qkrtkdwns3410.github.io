@@ -1,4 +1,4 @@
-import { CacheBustLink as Link } from "@/components/CacheBustLink";
+import Link from "next/link";
 import { Home } from "lucide-react";
 
 export default function NotFound() {

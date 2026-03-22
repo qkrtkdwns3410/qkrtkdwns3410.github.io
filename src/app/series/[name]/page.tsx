@@ -1,7 +1,7 @@
 import { getAllSeries, getPostsBySeries } from "@/lib/posts";
 import { ArticleList } from "@/components/ArticleList";
 import { ArrowLeft, BookOpen } from "lucide-react";
-import { CacheBustLink as Link } from "@/components/CacheBustLink";
+import Link from "next/link";
 
 interface PageProps {
   params: Promise<{ name: string }>;

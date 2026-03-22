@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Save, ArrowLeft, Tag, Loader2 } from "lucide-react";
-import { CacheBustLink as Link, cacheBustUrl } from "./CacheBustLink";
+import Link from "next/link";
 import { getGithubPat } from "@/lib/auth";
 import { getPost, createPost, updatePost } from "@/lib/github";
 
@@ -132,7 +132,7 @@ export function PostEditor({ mode, slug }: PostEditorProps) {
         await createPost(fileSlug, mdx, pat);
       }
 
-      router.push(cacheBustUrl("/admin/"));
+      router.push("/admin/");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "저장에 실패했습니다.";
       setError(msg);

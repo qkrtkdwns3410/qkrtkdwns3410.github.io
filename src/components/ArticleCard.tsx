@@ -1,4 +1,4 @@
-import { CacheBustLink as Link } from "./CacheBustLink";
+import Link from "next/link";
 import { Post } from "@/lib/types";
 import { Calendar, Clock } from "lucide-react";
 

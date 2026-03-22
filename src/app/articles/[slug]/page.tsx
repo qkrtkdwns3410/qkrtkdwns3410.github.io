@@ -5,7 +5,7 @@ import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 import rehypeSlug from "rehype-slug";
 import { Calendar, Clock, ArrowLeft } from "lucide-react";
-import { CacheBustLink as Link } from "@/components/CacheBustLink";
+import Link from "next/link";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
