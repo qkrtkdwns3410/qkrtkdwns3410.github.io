@@ -1,0 +1,1503 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RDS Blue/Green Readiness Decision Memo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #181817;
+      --ink-2: #2b2a27;
+      --paper: #f4f1ea;
+      --paper-2: #fffaf0;
+      --panel: #ffffff;
+      --line: #d8d0c3;
+      --line-strong: #22201d;
+      --muted: #69645b;
+      --amber: #ffb000;
+      --teal: #0aa6a6;
+      --red: #d94343;
+      --green: #13996b;
+      --shadow: 0 16px 44px rgba(24, 24, 23, 0.12);
+      --shadow-tight: 0 8px 22px rgba(24, 24, 23, 0.08);
+      --radius: 8px;
+      --ease: cubic-bezier(.2,.8,.2,1);
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --display: "Arial Black", "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      min-width: 0;
+    }
+    html {
+      max-width: 100%;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(24,24,23,.045) 1px, transparent 1px) 0 0 / 28px 28px,
+        linear-gradient(0deg, rgba(24,24,23,.035) 1px, transparent 1px) 0 0 / 28px 28px,
+        var(--paper);
+      font-family: var(--sans);
+      line-height: 1.58;
+      word-break: normal;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(135deg, transparent 0 10px, rgba(255,176,0,.07) 10px 12px),
+        radial-gradient(circle at 80% 12%, rgba(10,166,166,.08), transparent 30%);
+      opacity: .85;
+      mix-blend-mode: multiply;
+    }
+
+    .progress-bar {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 80;
+      height: 4px;
+      background: rgba(24, 24, 23, .12);
+    }
+
+    .progress-bar span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: var(--amber);
+    }
+
+    .skip-nav {
+      position: fixed;
+      left: 18px;
+      top: 14px;
+      z-index: 90;
+      transform: translateY(-150%);
+      padding: 10px 14px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--amber);
+      color: var(--ink);
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    .skip-nav:focus { transform: translateY(0); }
+
+    main {
+      position: relative;
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 24px 0 92px;
+    }
+
+    .topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 0 0;
+      font-family: var(--mono);
+      font-size: .82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--amber);
+      color: var(--ink);
+      font-weight: 900;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    header {
+      min-height: min(690px, calc(100vh - 72px));
+      display: grid;
+      grid-template-columns: minmax(0, 1.06fr) minmax(330px, .76fr);
+      gap: 28px;
+      align-items: end;
+      padding: 66px 0 36px;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 850px;
+      font-family: var(--display);
+      font-size: clamp(3.1rem, 8vw, 6.9rem);
+      line-height: .9;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      overflow-wrap: anywhere;
+    }
+
+    h1 span {
+      display: block;
+    }
+
+    .lead {
+      max-width: 720px;
+      margin: 26px 0 0;
+      color: var(--ink-2);
+      font-size: clamp(1.08rem, 2vw, 1.36rem);
+      font-weight: 650;
+      overflow-wrap: anywhere;
+    }
+
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--panel);
+      font-family: var(--mono);
+      font-size: .82rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .tag.teal { background: rgba(10,166,166,.14); }
+    .tag.green { background: rgba(19,153,107,.13); }
+    .tag.red { background: rgba(217,67,67,.12); }
+
+    .brief {
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .brief-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 2px solid var(--line-strong);
+      background: var(--ink);
+      color: var(--paper-2);
+      font-family: var(--mono);
+      font-weight: 900;
+    }
+
+    .brief-body { padding: 18px; }
+
+    .metric {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .metric:last-child { border-bottom: 0; }
+
+    .metric b {
+      display: grid;
+      place-items: center;
+      min-height: 58px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--amber);
+      font-family: var(--display);
+      font-size: 2rem;
+      line-height: 1;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-weight: 650;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .hero-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .hero-actions a,
+    .nav-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--ink);
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    .hero-actions a:first-child {
+      background: var(--amber);
+    }
+
+    .section-nav {
+      position: sticky;
+      top: 4px;
+      z-index: 70;
+      margin: 0 0 42px;
+      padding: 10px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(244, 241, 234, .94);
+      box-shadow: var(--shadow-tight);
+      backdrop-filter: blur(14px);
+      overflow: hidden;
+    }
+
+    .nav-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .nav-link {
+      flex: 0 0 auto;
+      min-height: 40px;
+      border-width: 1.5px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: .84rem;
+      white-space: nowrap;
+    }
+
+    .nav-link.active {
+      border-width: 2px;
+      background: var(--ink);
+      color: var(--paper-2);
+    }
+
+    section {
+      scroll-margin-top: 110px;
+      margin: 44px 0 82px;
+    }
+
+    .section-kicker {
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: .84rem;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      margin: 0 0 22px;
+      max-width: 900px;
+      font-family: var(--display);
+      font-size: clamp(2rem, 4vw, 4rem);
+      line-height: .98;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h3 {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+      line-height: 1.35;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: var(--ink-2);
+      overflow-wrap: anywhere;
+    }
+
+    .panel,
+    .callout,
+    .map,
+    .code {
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow-tight);
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .callout {
+      padding: clamp(18px, 3vw, 28px);
+      background:
+        linear-gradient(135deg, rgba(255,176,0,.2) 0 18%, transparent 18%),
+        var(--panel);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .panel {
+      padding: clamp(18px, 3vw, 26px);
+    }
+
+    .panel.rule-top {
+      border-top-width: 10px;
+    }
+
+    .panel.amber { border-top-color: var(--amber); }
+    .panel.teal { border-top-color: var(--teal); }
+    .panel.red { border-top-color: var(--red); }
+
+    ul,
+    ol {
+      margin: 0;
+      padding-left: 1.22rem;
+      color: var(--ink-2);
+    }
+
+    li + li { margin-top: 8px; }
+    li { overflow-wrap: anywhere; }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow-tight);
+    }
+
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 14px;
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--ink);
+      color: var(--paper-2);
+      font-family: var(--mono);
+      font-size: .84rem;
+      text-transform: uppercase;
+    }
+
+    th:last-child,
+    td:last-child { border-right: 0; }
+    tr:last-child td { border-bottom: 0; }
+
+    .flow {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(142px, 1fr);
+      gap: 32px;
+      min-width: 760px;
+      padding: 20px;
+    }
+
+    .flow-wrap,
+    .sequence-wrap,
+    .map-wrap {
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .step {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 96px;
+      padding: 14px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--paper-2);
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .step::after {
+      content: "";
+      position: absolute;
+      right: -24px;
+      top: 50%;
+      width: 16px;
+      height: 2px;
+      background: var(--line-strong);
+    }
+
+    .step::before {
+      content: "";
+      position: absolute;
+      right: -31px;
+      top: calc(50% - 5px);
+      width: 0;
+      height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 8px solid var(--line-strong);
+    }
+
+    .step:last-child::after,
+    .step:last-child::before { display: none; }
+    .step.hot { background: var(--amber); }
+    .step.cool { background: rgba(10,166,166,.13); }
+    .step.ok { background: rgba(19,153,107,.12); }
+
+    .sequence {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(128px, 1fr));
+      gap: 12px;
+      min-width: 760px;
+      padding: 18px;
+    }
+
+    .lane {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .lane-title {
+      display: grid;
+      place-items: center;
+      min-height: 54px;
+      padding: 9px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: var(--paper-2);
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .msg {
+      min-height: 54px;
+      padding: 10px;
+      border: 1.5px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--paper-2);
+      font-family: var(--mono);
+      font-size: .82rem;
+      font-weight: 800;
+    }
+
+    .msg.ok { background: rgba(19,153,107,.14); }
+    .msg.no { background: rgba(217,67,67,.13); }
+    .msg.wait { background: rgba(255,176,0,.2); }
+
+    .example-board {
+      display: grid;
+      grid-template-columns: minmax(280px, .78fr) minmax(0, 1.22fr);
+      gap: 18px;
+      padding: 18px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(10,166,166,.12) 0 22%, transparent 22%),
+        var(--panel);
+      box-shadow: var(--shadow-tight);
+    }
+
+    .terminal {
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      min-height: 100%;
+      padding: 16px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: #12110f;
+      color: #fff7e6;
+      font-family: var(--mono);
+    }
+
+    .terminal-title {
+      color: var(--amber);
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .terminal-line {
+      display: block;
+      color: #f7ecd7;
+      font-size: .86rem;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+
+    .terminal-line.dim { color: #b9aa92; }
+    .terminal-line.ok { color: #7ee0b3; }
+
+    .example-flow {
+      display: grid;
+      gap: 12px;
+    }
+
+    .example-title {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 0 2px;
+      font-family: var(--mono);
+      font-weight: 900;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .instance-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .instance-card {
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--paper-2);
+      overflow: hidden;
+    }
+
+    .instance-card header {
+      display: flex;
+      min-height: auto;
+      padding: 9px 10px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-bottom: 2px solid var(--line-strong);
+      background: var(--ink);
+      color: var(--paper-2);
+      font-family: var(--mono);
+      font-size: .78rem;
+      font-weight: 900;
+    }
+
+    .ready-dot {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(19,153,107,.18);
+      color: #b7ffe2;
+      font-size: .72rem;
+      white-space: nowrap;
+    }
+
+    .instance-card ul {
+      display: grid;
+      gap: 7px;
+      padding: 12px;
+      list-style: none;
+    }
+
+    .instance-card li {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .85rem;
+      font-weight: 750;
+    }
+
+    .instance-card li:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .instance-card strong {
+      color: var(--ink);
+      white-space: nowrap;
+    }
+
+    .summary-strip {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--amber);
+      font-family: var(--mono);
+      font-weight: 900;
+    }
+
+    .summary-strip code {
+      padding: 8px;
+      border: 1.5px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,.7);
+      font-size: .78rem;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .api-callout {
+      display: grid;
+      grid-template-columns: minmax(260px, .75fr) minmax(0, 1.25fr);
+      gap: 18px;
+      padding: 18px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(255,176,0,.22) 0 26%, transparent 26%),
+        var(--panel);
+      box-shadow: var(--shadow-tight);
+    }
+
+    .api-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .api-item {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 11px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--paper-2);
+      font-family: var(--mono);
+      font-size: .84rem;
+      font-weight: 850;
+    }
+
+    .api-item span:first-child {
+      display: inline-grid;
+      place-items: center;
+      min-height: 30px;
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: var(--paper-2);
+    }
+
+    .api-item code {
+      overflow-wrap: anywhere;
+    }
+
+    .dispatch-card {
+      display: grid;
+      align-content: start;
+      gap: 12px;
+      padding: 16px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: var(--paper-2);
+      font-family: var(--mono);
+    }
+
+    .dispatch-card h3 {
+      color: var(--amber);
+      font-family: var(--mono);
+      font-size: .95rem;
+      text-transform: uppercase;
+    }
+
+    .dispatch-card p {
+      color: #f5ead8;
+      font-size: .9rem;
+    }
+
+    .map {
+      padding: 18px;
+    }
+
+    .region-map {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(170px, 1fr));
+      gap: 12px;
+      min-width: 920px;
+    }
+
+    .region {
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--paper-2);
+      overflow: hidden;
+    }
+
+    .region h3 {
+      margin: 0;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--line-strong);
+      background: var(--amber);
+      font-family: var(--mono);
+      font-size: .96rem;
+    }
+
+    .brands {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 9px;
+      border: 1.5px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--panel);
+      font-size: .9rem;
+      font-weight: 850;
+    }
+
+    .count {
+      display: inline-grid;
+      place-items: center;
+      min-width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--ink);
+      color: var(--paper-2);
+      font-family: var(--mono);
+      font-size: .8rem;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .method {
+      position: relative;
+      min-height: 100%;
+      min-width: 0;
+      padding: 22px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow-tight);
+      overflow: hidden;
+    }
+
+    .method::before {
+      content: attr(data-label);
+      position: absolute;
+      right: 12px;
+      top: 10px;
+      color: rgba(24,24,23,.09);
+      font-family: var(--display);
+      font-size: clamp(3rem, 8vw, 6rem);
+      line-height: 1;
+    }
+
+    .method h3 {
+      position: relative;
+      margin-bottom: 18px;
+      font-size: 1.35rem;
+    }
+
+    .method p,
+    .method ul { position: relative; }
+
+    .code {
+      overflow-x: auto;
+      margin-top: 18px;
+      padding: 16px;
+      background: #12110f;
+      color: #fff7e6;
+      font-family: var(--mono);
+      font-size: .88rem;
+      white-space: pre;
+    }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .verdict {
+      display: grid;
+      gap: 12px;
+      padding: 24px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: var(--paper-2);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .verdict p { color: #e8dfd0; }
+
+    .checklist {
+      display: grid;
+      gap: 10px;
+    }
+
+    .check {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 12px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: var(--panel);
+      font-weight: 750;
+    }
+
+    .check span:first-child {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--green);
+      color: #fff;
+      font-family: var(--mono);
+      font-size: .85rem;
+      font-weight: 900;
+    }
+
+    .reveal {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 420ms var(--ease), transform 420ms var(--ease);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 960px) {
+      main { width: min(100% - 30px, 1180px); }
+      header,
+      .grid-2,
+      .grid-3,
+      .compare,
+      .example-board,
+      .api-callout,
+      .decision-grid {
+        grid-template-columns: 1fr;
+      }
+      header {
+        min-height: auto;
+        padding-top: 44px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      main { width: min(100% - 22px, 1180px); }
+      .topline {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      h1 {
+        font-size: clamp(1.95rem, 9.4vw, 2.7rem);
+        line-height: 1;
+      }
+      h1,
+      h2,
+      .lead,
+      .metric span,
+      p,
+      li {
+        word-break: break-all;
+        overflow-wrap: anywhere;
+      }
+      h2 {
+        font-size: clamp(1.42rem, 7vw, 2rem);
+        word-break: keep-all;
+        overflow-wrap: normal;
+      }
+      .hero-actions {
+        grid-template-columns: 1fr;
+      }
+      .metric {
+        grid-template-columns: 56px minmax(0, 1fr);
+      }
+      .metric b {
+        min-height: 48px;
+        font-size: 1.55rem;
+      }
+      .panel,
+      .callout,
+      .method,
+      .example-board,
+      .api-callout,
+      .verdict {
+        padding: 16px;
+      }
+      .instance-grid {
+        grid-template-columns: 1fr;
+      }
+      .summary-strip {
+        grid-template-columns: 1fr;
+      }
+      .api-item {
+        grid-template-columns: 1fr;
+      }
+      .flow,
+      .region-map {
+        padding: 14px;
+      }
+      .flow {
+        grid-auto-flow: row;
+        grid-auto-columns: unset;
+        grid-template-columns: 1fr;
+        min-width: 0;
+        gap: 12px;
+      }
+      .step {
+        min-height: 72px;
+      }
+      .step::after,
+      .step::before {
+        display: none;
+      }
+      .sequence {
+        grid-template-columns: 1fr;
+        min-width: 0;
+        padding: 14px;
+      }
+      .status-pill,
+      .tag {
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      .brief-head {
+        flex-wrap: wrap;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="progress-bar" aria-hidden="true"><span id="readProgress"></span></div>
+<a class="skip-nav" href="#main">본문으로 이동</a>
+
+<main id="main">
+  <div class="topline">
+    <span>Decision Memo / RDS Blue-Green Readiness</span>
+    <span class="status-pill">Recommendation: Region Fan-out API</span>
+  </div>
+
+  <header>
+    <div>
+      <h1>
+        <span>전환 준비</span>
+        <span>상태는 AWS</span>
+        <span>이벤트만으로</span>
+        <span>끝나지</span>
+        <span>않습니다</span>
+      </h1>
+      <p class="lead">
+        EventBridge 연동이 어려워도, 각 권역의 regional readiness fan-out API를 별도로 호출하면 실제 애플리케이션
+        인스턴스가 Green DB 준비 상태를 인지했는지 권역 단위로 확인할 수 있습니다.
+      </p>
+      <div class="hero-tags">
+        <span class="tag">KR / EU / NA / JP / SA</span>
+        <span class="tag teal">Hyundai / Kia / Genesis</span>
+        <span class="tag green">Hubble Summary Log</span>
+      </div>
+    </div>
+
+    <aside class="brief" aria-label="핵심 판단">
+      <div class="brief-head">
+        <span>EXECUTIVE SNAPSHOT</span>
+        <span>v1</span>
+      </div>
+      <div class="brief-body">
+        <div class="metric">
+          <b>2</b>
+          <span>검토 방식은 readiness API와 EventBridge 두 가지입니다.</span>
+        </div>
+        <div class="metric">
+          <b>1</b>
+          <span>운영 기본안은 권역별 regional fan-out API를 각각 호출하는 것입니다.</span>
+        </div>
+        <div class="metric">
+          <b>0</b>
+          <span>EventBridge 단독으로는 앱 인스턴스별 준비 여부를 보장할 수 없습니다.</span>
+        </div>
+        <div class="hero-actions">
+          <a href="#summary">요약 보기</a>
+          <a href="#recommendation">권장안 보기</a>
+        </div>
+      </div>
+    </aside>
+  </header>
+
+  <nav class="section-nav" aria-label="섹션 이동">
+    <div class="nav-scroll">
+      <a class="nav-link" href="#summary">00 요약</a>
+      <a class="nav-link" href="#method-1">01 Readiness API</a>
+      <a class="nav-link" href="#inventory">02 대상 목록</a>
+      <a class="nav-link" href="#method-2">03 EventBridge</a>
+      <a class="nav-link" href="#recommendation">04 권장안</a>
+    </div>
+  </nav>
+
+  <section id="summary">
+    <div class="section-kicker">00 / Summary</div>
+    <h2>기본 확인은 권역별 regional fan-out API 호출입니다</h2>
+    <div class="callout">
+      <p>
+        핵심은 AWS에서 Blue/Green 배포가 생성되었는지 보는 것이 아니라,
+        <strong>각 권역의 regional fan-out API를 호출해 해당 권역 내부 애플리케이션 인스턴스가 전환 준비 상태인지 확인하는 것</strong>입니다.
+        KR, EU, NA, JP, SA가 서로 다른 AWS 리전/내부망이라면 하나의 중앙 API가 모든 권역 인스턴스를 직접 호출하는 구조로 보지 않습니다.
+      </p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>구분</th>
+          <th>방식</th>
+          <th>주요 용도</th>
+          <th>한계</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td><span class="tag green">방식 1</span></td>
+          <td>인스턴스별 readiness API 확인</td>
+          <td>각 서버가 실제로 준비됐는지 확인</td>
+          <td>대상 인스턴스 목록 관리 필요</td>
+        </tr>
+        <tr>
+          <td><span class="tag">방식 2</span></td>
+          <td>AWS EventBridge 확인</td>
+          <td>AWS Blue/Green 이벤트 감지</td>
+          <td>앱 인스턴스별 준비 여부는 알 수 없음</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flow-wrap panel">
+      <div class="flow">
+        <div class="step">운영자 / 배포 파이프라인</div>
+        <div class="step hot">권역별 regional endpoint 호출</div>
+        <div class="step">브랜드별 local fan-out</div>
+        <div class="step">각 인스턴스 호출</div>
+        <div class="step cool">준비 상태 취합</div>
+        <div class="step ok">Hubble / OpenSearch 확인</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="method-1">
+    <div class="section-kicker">01 / Runtime Proof</div>
+    <h2>방식 1. 인스턴스별 readiness API 확인</h2>
+
+    <div class="compare">
+      <article class="method" data-label="API">
+        <h3>무엇을 확인하나</h3>
+        <p>
+          각 애플리케이션 인스턴스가 자기 서버 내부에서 DB 연결 상태와 Blue/Green topology 인지 여부를 확인합니다.
+        </p>
+        <ul>
+          <li>인스턴스별 실제 준비 상태 확인</li>
+          <li>특정 인스턴스 장애 식별</li>
+          <li>권역/브랜드 단위 summary 로그 생성</li>
+        </ul>
+      </article>
+
+      <article class="method" data-label="WHY">
+        <h3>왜 fan-out인가</h3>
+        <p>
+          readiness 상태는 인스턴스별 런타임 상태입니다. 한 서버가 다른 서버의 AWS Wrapper 연결 상태,
+          DB 연결 상태, topology 인지 여부를 직접 알 수 없습니다.
+        </p>
+        <p>
+          스케줄링 방식은 평상시 로그가 계속 발생하고, 전환 시점의 최신 상태 판단이 어렵습니다.
+          필요한 시점에만 확인하려면 각 권역의 regional API가 같은 권역 내부 인스턴스로 fan-out 호출하는 구조가 맞습니다.
+        </p>
+      </article>
+    </div>
+
+    <div class="sequence-wrap panel">
+      <div class="sequence">
+        <div class="lane">
+          <div class="lane-title">KR regional API</div>
+          <div class="msg wait">readiness 요청</div>
+          <div class="msg">전체 결과 취합</div>
+          <div class="msg">summary 로그 생성</div>
+        </div>
+        <div class="lane">
+          <div class="lane-title">App 1</div>
+          <div class="msg ok">ready=true</div>
+        </div>
+        <div class="lane">
+          <div class="lane-title">App 2</div>
+          <div class="msg ok">ready=true</div>
+        </div>
+        <div class="lane">
+          <div class="lane-title">App 3</div>
+          <div class="msg no">ready=false</div>
+        </div>
+        <div class="lane">
+          <div class="lane-title">Hubble</div>
+          <div class="msg">OpenSearch 조회</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="example-board" aria-label="readiness fan-out 확인 예시">
+      <div class="terminal">
+        <div class="terminal-title">Example run / KR-KIA</div>
+        <span class="terminal-line">$ curl -X POST https://kr-readiness.internal/internal/rds-bluegreen/readiness/fanout?brand=KIA</span>
+        <span class="terminal-line dim">KR regional API resolves local KIA instances</span>
+        <span class="terminal-line">POST app-1 /api/rds-bluegreen/readiness</span>
+        <span class="terminal-line">POST app-2 /api/rds-bluegreen/readiness</span>
+        <span class="terminal-line">POST app-3 /api/rds-bluegreen/readiness</span>
+        <span class="terminal-line ok">READY: 3 / 3 instances</span>
+      </div>
+
+      <div class="example-flow">
+        <div class="example-title">
+          <span>인스턴스별 확인 결과</span>
+          <span>source + target topology visible</span>
+        </div>
+
+        <div class="instance-grid">
+          <article class="instance-card">
+            <header>
+              <span>KR-KIA-APP-01</span>
+              <span class="ready-dot">ready</span>
+            </header>
+            <ul>
+              <li><span>wrapper</span><strong>OK</strong></li>
+              <li><span>target</span><strong>VISIBLE</strong></li>
+              <li><span>readOnly</span><strong>false</strong></li>
+            </ul>
+          </article>
+
+          <article class="instance-card">
+            <header>
+              <span>KR-KIA-APP-02</span>
+              <span class="ready-dot">ready</span>
+            </header>
+            <ul>
+              <li><span>wrapper</span><strong>OK</strong></li>
+              <li><span>target</span><strong>VISIBLE</strong></li>
+              <li><span>readOnly</span><strong>false</strong></li>
+            </ul>
+          </article>
+
+          <article class="instance-card">
+            <header>
+              <span>KR-KIA-APP-03</span>
+              <span class="ready-dot">ready</span>
+            </header>
+            <ul>
+              <li><span>wrapper</span><strong>OK</strong></li>
+              <li><span>target</span><strong>VISIBLE</strong></li>
+              <li><span>readOnly</span><strong>false</strong></li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="summary-strip">
+          <span>Hubble Log</span>
+          <code>RDS_BLUE_GREEN_READINESS_SUMMARY allReady=true region=KR brand=KIA totalInstances=3 readyInstances=3 notReadyInstances=0</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="api-callout" aria-label="권역 브랜드별 fan-out API 호출 예시">
+      <div class="dispatch-card">
+        <h3>API 호출 기준</h3>
+        <p>
+          EventBridge가 되면 자동 트리거로 연결하고, 어렵다면 운영자 또는 배포 파이프라인이 아래 API를 직접 호출합니다.
+          권역은 서로 다른 AWS 리전/내부망이므로 하나의 중앙 API가 전체 권역으로 fan-out하지 않습니다.
+        </p>
+        <p>
+          예: KR endpoint는 KR 내부 인스턴스만, EU endpoint는 EU 내부 인스턴스만 fan-out합니다. 운영 절차는 필요한 권역 endpoint를 각각 호출하고 결과를 Hubble/OpenSearch에서 확인합니다.
+        </p>
+      </div>
+      <div class="api-list">
+        <div class="api-item"><span>KR / KIA</span><code>POST https://kr-readiness.internal/internal/rds-bluegreen/readiness/fanout?brand=KIA</code></div>
+        <div class="api-item"><span>KR / HYUNDAI</span><code>POST https://kr-readiness.internal/internal/rds-bluegreen/readiness/fanout?brand=HYUNDAI</code></div>
+        <div class="api-item"><span>KR / GENESIS</span><code>POST https://kr-readiness.internal/internal/rds-bluegreen/readiness/fanout?brand=GENESIS</code></div>
+        <div class="api-item"><span>EU / KIA</span><code>POST https://eu-readiness.internal/internal/rds-bluegreen/readiness/fanout?brand=KIA</code></div>
+        <div class="api-item"><span>NA / KIA</span><code>POST https://na-readiness.internal/internal/rds-bluegreen/readiness/fanout?brand=KIA</code></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel rule-top teal">
+        <h3>장점</h3>
+        <ul>
+          <li>실제 애플리케이션 서버 기준으로 준비 상태를 확인할 수 있습니다.</li>
+          <li>특정 서버만 준비되지 않은 경우 바로 식별할 수 있습니다.</li>
+          <li>권역/브랜드별 전체 준비 여부를 분리해서 볼 수 있습니다.</li>
+        </ul>
+      </div>
+      <div class="panel rule-top red">
+        <h3>고려사항</h3>
+        <ul>
+          <li>호출 대상 인스턴스 목록을 관리해야 합니다.</li>
+          <li>권역별 regional endpoint 목록을 운영 절차나 배포 파이프라인이 알고 있어야 합니다.</li>
+          <li>fan-out 호출 timeout과 일부 실패 처리가 필요합니다.</li>
+          <li>스위치오버 직전에 실행하는 운영 절차가 필요합니다.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="inventory">
+    <div class="section-kicker">02 / Target Inventory</div>
+    <h2>대상 목록은 secret이 아니라 discovery 문제입니다</h2>
+
+    <div class="map map-wrap">
+      <div class="region-map" aria-label="권역 브랜드 인스턴스 구조">
+        <div class="region">
+          <h3>KR</h3>
+          <div class="brands">
+            <div class="brand">Kia <span class="count">N</span></div>
+            <div class="brand">Hyundai <span class="count">N</span></div>
+            <div class="brand">Genesis <span class="count">N</span></div>
+          </div>
+        </div>
+        <div class="region">
+          <h3>EU</h3>
+          <div class="brands">
+            <div class="brand">Kia <span class="count">N</span></div>
+            <div class="brand">Hyundai <span class="count">N</span></div>
+            <div class="brand">Genesis <span class="count">N</span></div>
+          </div>
+        </div>
+        <div class="region">
+          <h3>NA</h3>
+          <div class="brands">
+            <div class="brand">Kia <span class="count">N</span></div>
+            <div class="brand">Hyundai <span class="count">N</span></div>
+            <div class="brand">Genesis <span class="count">N</span></div>
+          </div>
+        </div>
+        <div class="region">
+          <h3>JP</h3>
+          <div class="brands">
+            <div class="brand">Kia <span class="count">N</span></div>
+            <div class="brand">Hyundai <span class="count">N</span></div>
+            <div class="brand">Genesis <span class="count">N</span></div>
+          </div>
+        </div>
+        <div class="region">
+          <h3>SA</h3>
+          <div class="brands">
+            <div class="brand">Kia <span class="count">N</span></div>
+            <div class="brand">Hyundai <span class="count">N</span></div>
+            <div class="brand">Genesis <span class="count">N</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="panel rule-top amber">
+        <h3>권장 순서</h3>
+        <ol>
+          <li>ALB Target Group, Cloud Map, ECS/Kubernetes service discovery에서 현재 대상 조회</li>
+          <li>SSM Parameter Store 또는 AppConfig에 권역 내부 브랜드별 discovery source 저장</li>
+          <li>초기 단계에서만 정적 설정 사용</li>
+        </ol>
+      </div>
+      <div class="panel rule-top teal">
+        <h3>Security Group 기준</h3>
+        <p>
+          KR 내부에서 Kia, Hyundai, Genesis가 같은 SG 또는 호출 가능한 SG 묶음에 있으면 하나의 KR regional API가 세 브랜드를 모두 확인할 수 있습니다.
+        </p>
+        <p>
+          브랜드별 SG가 분리되어 호출이 막혀 있다면 브랜드/SG 단위로 fan-out을 나누거나 regional API SG에서 각 브랜드 SG로 ingress를 허용해야 합니다.
+        </p>
+      </div>
+      <div class="panel rule-top red">
+        <h3>Secrets Manager는 왜 아닌가</h3>
+        <p>
+          인스턴스 IP나 내부 URL은 비밀번호나 API key가 아닙니다.
+          따라서 secret 저장소가 아니라 서비스 위치 정보 또는 운영 설정으로 관리하는 편이 자연스럽습니다.
+        </p>
+        <p>
+          SG는 대상 목록 저장소가 아니라 호출 가능한 네트워크 경계로 보고, 대상 목록은 discovery/config에서 관리하는 편이 맞습니다.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="method-2">
+    <div class="section-kicker">03 / AWS Event Signal</div>
+    <h2>방식 2. AWS EventBridge 기반 확인</h2>
+
+    <div class="grid-2">
+      <div class="panel rule-top amber">
+        <h3>동작 방식</h3>
+        <ol>
+          <li>RDS Blue/Green 배포 상태 변경 이벤트가 발생합니다.</li>
+          <li>EventBridge rule이 해당 이벤트를 감지합니다.</li>
+          <li>Lambda, SNS, 배포 파이프라인 등으로 이벤트를 전달합니다.</li>
+          <li>필요 시 readiness fan-out을 실행합니다.</li>
+        </ol>
+      </div>
+      <div class="panel rule-top teal">
+        <h3>좋은 점</h3>
+        <ul>
+          <li>AWS 리소스 상태 변화를 자동으로 감지할 수 있습니다.</li>
+          <li>Blue/Green 배포 완료, 실패, 스위치오버 이벤트를 알림으로 연결하기 쉽습니다.</li>
+          <li>Lambda, SNS, SQS 등 AWS 서비스와 연동이 쉽습니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-wrap panel">
+      <div class="flow">
+        <div class="step">RDS Blue/Green</div>
+        <div class="step">EventBridge</div>
+        <div class="step hot">Lambda / Pipeline</div>
+        <div class="step cool">알림 또는 readiness 확인</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p>
+        EventBridge는 AWS 리소스 이벤트를 알려주는 장치입니다. 각 애플리케이션 서버가 실제로 Green DB를
+        인지했는지는 알 수 없으므로, EventBridge만으로 전체 서버 전환 준비 완료를 판단하면 안 됩니다.
+      </p>
+    </div>
+  </section>
+
+  <section id="recommendation">
+    <div class="section-kicker">04 / Recommendation</div>
+    <h2>권장안. 권역별 regional fan-out을 기본 절차로 둡니다</h2>
+
+    <div class="decision-grid">
+      <div class="verdict">
+        <h3>최종 판단 기준</h3>
+        <p>
+          switchover 전 최종 판단은 각 권역의 regional fan-out 결과가 브랜드별로 <strong>allReady=true</strong>인지 확인하는 것입니다.
+          EventBridge는 가능할 경우 권역별 fan-out 호출을 자동화하는 보조 수단으로 둡니다.
+        </p>
+        <div class="code">RDS_BLUE_GREEN_READINESS_SUMMARY allReady=true region=KR brand=KIA totalInstances=6 readyInstances=6 notReadyInstances=0</div>
+      </div>
+
+      <div class="checklist">
+        <div class="check"><span>1</span><div>배포 준비 시점에 권역별 regional fan-out API를 각각 호출합니다.</div></div>
+        <div class="check"><span>2</span><div>각 regional API는 자기 권역 내부 인스턴스만 fan-out합니다.</div></div>
+        <div class="check"><span>3</span><div>EventBridge가 가능하면 권역별 fan-out 호출을 자동 트리거로 연결합니다.</div></div>
+        <div class="check"><span>4</span><div>Hubble/OpenSearch에 요약 로그를 남깁니다.</div></div>
+        <div class="check"><span>5</span><div>모든 인스턴스가 준비된 경우에만 switchover를 진행합니다.</div></div>
+      </div>
+    </div>
+
+    <div class="flow-wrap panel">
+      <div class="flow">
+        <div class="step">Blue/Green 배포 생성</div>
+        <div class="step hot">권역별 regional endpoint 호출</div>
+        <div class="step">브랜드별 local fan-out</div>
+        <div class="step">각 인스턴스 readiness 확인</div>
+        <div class="step">전체 인스턴스 ready?</div>
+        <div class="step ok">Yes: Switchover</div>
+        <div class="step">No: 미준비 인스턴스 재점검</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const progress = document.querySelector("#readProgress");
+  const sections = Array.from(document.querySelectorAll("main > section"));
+  const navLinks = Array.from(document.querySelectorAll(".nav-link"));
+
+  function updateProgress() {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    progress.style.width = `${max <= 0 ? 0 : (window.scrollY / max) * 100}%`;
+
+    let active = 0;
+    sections.forEach((section, index) => {
+      if (section.getBoundingClientRect().top <= 135) active = index;
+    });
+    navLinks.forEach((link, index) => link.classList.toggle("active", index === active));
+  }
+
+  const revealTargets = Array.from(document.querySelectorAll(".panel, .callout, .table-wrap, .method, .map, .brief, .verdict, .check"));
+  revealTargets.forEach((target) => target.classList.add("reveal"));
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("visible");
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  revealTargets.forEach((target) => observer.observe(target));
+
+  window.addEventListener("scroll", updateProgress, { passive: true });
+  window.addEventListener("resize", updateProgress);
+  updateProgress();
+</script>
+</body>
+</html>
