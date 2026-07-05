@@ -1,5 +1,15 @@
 # RDS Blue/Green 전환 준비 상태 확인 방안
 
+## 배경 메모
+
+처음에는 AWS Advanced JDBC Wrapper 자체에서 Green DB 인지 상태를 로그로 남기거나, 해당 값을 쉽게 가져와서 Hubble/OpenSearch에 뿌릴 수 있을 것으로 봤습니다.
+
+확인 결과, Wrapper가 “각 인스턴스가 Green DB를 인지했고 switchover 준비가 됐다”는 형태의 로그를 별도로 남기지는 않았습니다. 결국 이 상태를 확인하려면 서버에서 주기적으로 체크하거나, 필요 시점에 별도 API를 호출해야 합니다.
+
+따라서 평시 스케줄링 로그를 계속 남기기보다는, switchover 전에만 **1안의 readiness fan-out API 방식**으로 확인하는 방향이 적합하다고 판단했습니다.
+
+---
+
 ## 결론
 
 기본안은 **1안. 인스턴스별 readiness fan-out API**입니다.
@@ -108,4 +118,3 @@ flowchart LR
 4. Hubble/OpenSearch에 요약 로그 적재
 5. 모든 권역/브랜드가 `allReady=true`이면 switchover 진행
 6. EventBridge는 가능할 경우 1안 호출을 자동화하는 보조 수단으로 사용
-

@@ -360,6 +360,30 @@
         var(--panel);
     }
 
+    .context-note {
+      margin-bottom: 18px;
+      padding: 16px;
+      border: 2px solid var(--line-strong);
+      border-radius: var(--radius);
+      background: rgba(255, 250, 240, .92);
+      box-shadow: var(--shadow-tight);
+    }
+
+    .context-note strong {
+      display: block;
+      margin-bottom: 6px;
+      font-family: var(--mono);
+      font-size: .82rem;
+      text-transform: uppercase;
+    }
+
+    .context-note p {
+      margin: 0;
+      color: var(--muted);
+      font-size: .94rem;
+      font-weight: 650;
+    }
+
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1100,6 +1124,13 @@
 
   <section id="summary">
     <div class="section-kicker">00 / Summary</div>
+    <div class="context-note">
+      <strong>Background</strong>
+      <p>
+        처음에는 AWS Advanced JDBC Wrapper 자체에서 Green DB 인지 상태를 로그로 남기거나 쉽게 가져올 수 있을 것으로 봤습니다.
+        확인 결과, Wrapper가 인스턴스별 switchover 준비 완료 로그를 별도로 남기지는 않아, 필요 시점에 별도 readiness API로 확인하는 방향을 검토했습니다.
+      </p>
+    </div>
     <h2>기본 확인은 권역별 regional fan-out API 호출입니다</h2>
     <div class="callout">
       <p>
