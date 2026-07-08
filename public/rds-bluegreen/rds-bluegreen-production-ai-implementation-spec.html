@@ -1,0 +1,1412 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RDS Blue/Green Readiness Gate 운영계 AI 구현 지시서</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --ink: #191f28;
+      --sub: #4e5968;
+      --muted: #6b7684;
+      --line: #e5e8eb;
+      --soft: #f7f9fb;
+      --soft-2: #f2f4f6;
+      --blue: #3182f6;
+      --blue-dark: #1b64da;
+      --green: #00a76f;
+      --orange: #b7791f;
+      --red: #e5484d;
+      --surface: #fff;
+      --surface-strong: #fff;
+      --page-bg:
+        linear-gradient(180deg, #fff 0, #f7f9fb 520px, #fff 100%),
+        repeating-linear-gradient(90deg, rgba(49, 130, 246, .035) 0, rgba(49, 130, 246, .035) 1px, transparent 1px, transparent 28px);
+      --dock-bg: rgba(255,255,255,.92);
+      --control-bg: #fff;
+      --badge-bg: rgba(255,255,255,.86);
+      --code-bg: #101828;
+      --inline-code-bg: #f2f4f6;
+      --inline-code-line: rgba(213,218,224,.76);
+      --callout-bg: linear-gradient(180deg, rgba(49,130,246,.08), #fff);
+      --warn-bg: linear-gradient(180deg, rgba(255,202,99,.18), #fff);
+      --danger-bg: linear-gradient(180deg, rgba(229,72,77,.08), #fff);
+      --shadow: 0 14px 34px rgba(25, 31, 40, .08);
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --ease: cubic-bezier(.2, .8, .2, 1);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #f2f4f6;
+        --sub: #d1d6de;
+        --muted: #aeb7c2;
+        --line: #2b333d;
+        --soft: #151b23;
+        --soft-2: #101318;
+        --blue: #5b9dff;
+        --blue-dark: #8bbcff;
+        --green: #36d399;
+        --orange: #f7c873;
+        --red: #ff7a80;
+        --surface: #171c24;
+        --surface-strong: #1f2630;
+        --page-bg:
+          linear-gradient(180deg, #0e1117 0, #121821 520px, #0e1117 100%),
+          repeating-linear-gradient(90deg, rgba(91, 157, 255, .06) 0, rgba(91, 157, 255, .06) 1px, transparent 1px, transparent 28px);
+        --dock-bg: rgba(23,28,36,.92);
+        --control-bg: #151b23;
+        --badge-bg: rgba(255,255,255,.06);
+        --code-bg: #080b10;
+        --inline-code-bg: #101318;
+        --inline-code-line: #303946;
+        --callout-bg: linear-gradient(180deg, rgba(91,157,255,.13), #171c24);
+        --warn-bg: linear-gradient(180deg, rgba(247,200,115,.15), #171c24);
+        --danger-bg: linear-gradient(180deg, rgba(255,122,128,.12), #171c24);
+        --shadow: 0 18px 44px rgba(0,0,0,.38);
+      }
+    }
+
+    :root[data-theme="light"] {
+      color-scheme: light;
+      --ink: #191f28;
+      --sub: #4e5968;
+      --muted: #6b7684;
+      --line: #e5e8eb;
+      --soft: #f7f9fb;
+      --soft-2: #f2f4f6;
+      --blue: #3182f6;
+      --blue-dark: #1b64da;
+      --green: #00a76f;
+      --orange: #b7791f;
+      --red: #e5484d;
+      --surface: #fff;
+      --surface-strong: #fff;
+      --page-bg:
+        linear-gradient(180deg, #fff 0, #f7f9fb 520px, #fff 100%),
+        repeating-linear-gradient(90deg, rgba(49, 130, 246, .035) 0, rgba(49, 130, 246, .035) 1px, transparent 1px, transparent 28px);
+      --dock-bg: rgba(255,255,255,.92);
+      --control-bg: #fff;
+      --badge-bg: rgba(255,255,255,.86);
+      --code-bg: #101828;
+      --inline-code-bg: #f2f4f6;
+      --inline-code-line: rgba(213,218,224,.76);
+      --callout-bg: linear-gradient(180deg, rgba(49,130,246,.08), #fff);
+      --warn-bg: linear-gradient(180deg, rgba(255,202,99,.18), #fff);
+      --danger-bg: linear-gradient(180deg, rgba(229,72,77,.08), #fff);
+      --shadow: 0 14px 34px rgba(25, 31, 40, .08);
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --ink: #f2f4f6;
+      --sub: #d1d6de;
+      --muted: #aeb7c2;
+      --line: #2b333d;
+      --soft: #151b23;
+      --soft-2: #101318;
+      --blue: #5b9dff;
+      --blue-dark: #8bbcff;
+      --green: #36d399;
+      --orange: #f7c873;
+      --red: #ff7a80;
+      --surface: #171c24;
+      --surface-strong: #1f2630;
+      --page-bg:
+        linear-gradient(180deg, #0e1117 0, #121821 520px, #0e1117 100%),
+        repeating-linear-gradient(90deg, rgba(91, 157, 255, .06) 0, rgba(91, 157, 255, .06) 1px, transparent 1px, transparent 28px);
+      --dock-bg: rgba(23,28,36,.92);
+      --control-bg: #151b23;
+      --badge-bg: rgba(255,255,255,.06);
+      --code-bg: #080b10;
+      --inline-code-bg: #101318;
+      --inline-code-line: #303946;
+      --callout-bg: linear-gradient(180deg, rgba(91,157,255,.13), #171c24);
+      --warn-bg: linear-gradient(180deg, rgba(247,200,115,.15), #171c24);
+      --danger-bg: linear-gradient(180deg, rgba(255,122,128,.12), #171c24);
+      --shadow: 0 18px 44px rgba(0,0,0,.38);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page-bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", "Apple SD Gothic Neo", Roboto, Arial, sans-serif;
+      line-height: 1.72;
+      overflow-x: hidden;
+    }
+
+    .progress-bar { position: fixed; inset: 0 0 auto; z-index: 50; height: 3px; background: rgba(229, 232, 235, .88); }
+    .progress-bar span { display: block; width: 0; height: 100%; background: var(--blue); }
+    .skip-nav {
+      position: absolute;
+      left: 16px;
+      top: -64px;
+      z-index: 60;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--ink);
+      color: #fff;
+      text-decoration: none;
+    }
+    .skip-nav:focus { top: 14px; }
+
+    main {
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 32px 0 96px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(320px, .72fr);
+      gap: 28px;
+      align-items: end;
+      min-height: min(700px, calc(100vh - 48px));
+      padding: 72px 0 38px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid rgba(49, 130, 246, .24);
+      border-radius: 8px;
+      background: rgba(49, 130, 246, .08);
+      color: var(--blue-dark);
+      font-weight: 850;
+    }
+
+    h1 {
+      margin: 18px 0;
+      font-size: clamp(2.4rem, 5.8vw, 5.45rem);
+      line-height: 1.03;
+      letter-spacing: 0;
+      font-weight: 880;
+    }
+    h2 { margin: 0 0 18px; font-size: clamp(1.75rem, 3vw, 2.55rem); line-height: 1.18; letter-spacing: 0; }
+    h3 { margin: 0 0 10px; font-size: 1.14rem; line-height: 1.38; }
+    p { margin: 0 0 14px; overflow-wrap: anywhere; }
+    a { color: var(--blue-dark); }
+
+    .lead {
+      max-width: 760px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(1.04rem, 2vw, 1.25rem);
+    }
+
+    .badge-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+    .badge {
+      min-height: 36px;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--badge-bg);
+      color: var(--sub);
+      font-weight: 760;
+    }
+
+    .panel, .card, .callout, .diagram-wrap, pre, table {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .panel { padding: 22px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-top: 12px; }
+    .metric { padding: 15px; border-radius: 8px; background: var(--soft); }
+    .metric b { display: block; font-size: clamp(1.65rem, 3.8vw, 2.35rem); line-height: 1; }
+    .metric span { display: block; margin-top: 7px; color: var(--muted); font-size: .93rem; }
+    .green { color: var(--green); }
+    .red { color: var(--red); }
+
+    .section-dock {
+      position: sticky;
+      top: 3px;
+      z-index: 40;
+      margin: 0 0 34px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--dock-bg);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+    .dock-inner { display: flex; gap: 8px; overflow-x: auto; }
+    .chapter-link {
+      flex: 0 0 auto;
+      min-height: 44px;
+      padding: 10px 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--control-bg);
+      color: var(--sub);
+      text-decoration: none;
+      font-weight: 820;
+      white-space: nowrap;
+    }
+    .chapter-link.is-active { border-color: rgba(49,130,246,.28); background: rgba(49,130,246,.1); color: var(--blue-dark); }
+
+    section { scroll-margin-top: 96px; margin: 38px 0 76px; }
+    .section-lead { max-width: 900px; margin-bottom: 22px; color: var(--muted); font-size: 1.04rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+    .card, .callout { min-width: 0; padding: clamp(18px, 2.5vw, 26px); }
+    .kicker { display: inline-flex; margin-bottom: 10px; color: var(--blue-dark); font-size: .88rem; font-weight: 850; }
+    .callout { border-color: rgba(49,130,246,.26); background: var(--callout-bg); }
+    .warn { border-color: rgba(183,121,31,.25); background: var(--warn-bg); }
+    .danger { border-color: rgba(229,72,77,.22); background: var(--danger-bg); }
+
+    .check-list, .plain-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .check-list li, .plain-list li { overflow-wrap: anywhere; }
+    .check-list li {
+      display: grid;
+      grid-template-columns: 28px minmax(0,1fr);
+      gap: 10px;
+      align-items: start;
+      color: var(--sub);
+    }
+    .check-list li::before {
+      content: "✓";
+      display: inline-grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: rgba(0,167,111,.1);
+      color: var(--green);
+      font-weight: 900;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .flow-step {
+      min-height: 108px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-strong);
+    }
+    .flow-step b { display: block; margin-bottom: 6px; color: var(--blue-dark); font-size: .88rem; }
+
+    code {
+      padding: .08rem .28rem;
+      border: 1px solid var(--inline-code-line);
+      border-radius: 6px;
+      background: var(--inline-code-bg);
+      font-family: var(--mono);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    pre {
+      margin: 16px 0 0;
+      max-width: 100%;
+      overflow-x: auto;
+      padding: 16px;
+      color: #d8e1ff;
+      background: var(--code-bg);
+      box-shadow: none;
+      font-family: var(--mono);
+      font-size: .9rem;
+      line-height: 1.58;
+    }
+    pre code { padding: 0; border: 0; background: transparent; color: inherit; }
+    .light-code { color: var(--ink); background: var(--soft); }
+
+    .table-wrap { max-width: 100%; overflow-x: auto; border-radius: 8px; }
+    table { width: 100%; min-width: 760px; border-collapse: separate; border-spacing: 0; overflow: hidden; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: var(--soft); color: var(--sub); font-size: .94rem; }
+    tr:last-child td { border-bottom: 0; }
+
+    .diagram-wrap { padding: 18px; overflow-x: auto; }
+    .mermaid { min-width: 720px; }
+    .source-note { margin-top: 10px; color: var(--muted); font-size: .92rem; }
+
+    .task-list {
+      display: grid;
+      gap: 12px;
+      counter-reset: task;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .task-list li {
+      position: relative;
+      padding: 14px 14px 14px 54px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-strong);
+      counter-increment: task;
+    }
+    .task-list li::before {
+      content: counter(task);
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 900;
+    }
+    .task-list b { display: block; margin-bottom: 4px; }
+
+    .theme-toggle {
+      min-height: 44px;
+      margin-top: 20px;
+      padding: 10px 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--control-bg);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 830;
+      cursor: pointer;
+    }
+
+    .theme-toggle:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--blue) 42%, transparent);
+      outline-offset: 2px;
+    }
+
+    .mermaid svg {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    .reveal { opacity: 0; transform: translateY(18px); transition: opacity 420ms var(--ease), transform 420ms var(--ease); }
+    .reveal.is-visible { opacity: 1; transform: translateY(0); }
+    footer { margin-top: 76px; padding: 28px 0 12px; border-top: 1px solid var(--line); color: var(--muted); }
+
+    @media (max-width: 980px) {
+      main { width: min(100% - 28px, 1180px); }
+      header { grid-template-columns: 1fr; min-height: auto; padding-top: 58px; }
+      .grid-2, .grid-3, .flow { grid-template-columns: 1fr; }
+      .mermaid { min-width: 640px; }
+    }
+    @media (max-width: 560px) {
+      main { width: min(100% - 24px, 1180px); }
+      h1 { font-size: clamp(2.03rem, 10vw, 3.15rem); line-height: 1.08; }
+      .summary-grid { grid-template-columns: 1fr; }
+      pre code { white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+      table { min-width: 640px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="progress-bar" aria-hidden="true"><span id="readProgress"></span></div>
+<a class="skip-nav" href="#main">본문으로 건너뛰기</a>
+
+<main id="main">
+  <header>
+    <div>
+      <span class="eyebrow">Production Implementation Spec</span>
+      <h1>RDS Blue/Green Readiness Gate 운영계 AI 구현 지시서</h1>
+      <p class="lead">
+        이 파일 하나만 보고 운영계 소스에 구현할 수 있도록 작성한 상세 명세다.
+        목적은 AWS JDBC Wrapper 내부 서비스 객체에 의존하지 않고, AWS SDK, 일반 JDBC, DNS, 인스턴스 discovery를 사용해
+        스위치오버 직전 모든 앱 인스턴스의 준비 상태를 판정하는 것이다.
+      </p>
+      <div class="badge-row">
+        <span class="badge">wrapper service object 의존 없음</span>
+        <span class="badge">AWS SDK 기반</span>
+        <span class="badge">regional fanout</span>
+        <span class="badge">pre-switchover gate</span>
+      </div>
+      <button class="theme-toggle" type="button" aria-pressed="false">다크 모드</button>
+    </div>
+    <aside class="panel" aria-label="핵심 구현 기준">
+      <h2 style="font-size:1.25rem;margin-bottom:8px">최종 구현 목표</h2>
+      <p>운영자가 권역 API 하나만 호출하면 내부 브랜드/인스턴스 전체가 fanout 조회되고, 모든 대상이 준비됐을 때만 switchover를 허용한다.</p>
+      <div class="summary-grid">
+        <div class="metric"><b class="green">allReady</b><span>모든 인스턴스 ready일 때만 true</span></div>
+        <div class="metric"><b>3회</b><span>기본 연속 성공 횟수</span></div>
+        <div class="metric"><b>8/8</b><span>실제 lab fanout 검증 규모</span></div>
+        <div class="metric"><b>필수</b><span>DescribeDBInstances 보강</span></div>
+      </div>
+    </aside>
+  </header>
+
+  <section>
+    <h2>1. AI 구현 지시 요약</h2>
+    <p class="section-lead">
+      운영계 AI 에이전트는 아래 범위를 그대로 구현한다. 기존 AWS JDBC Wrapper의 `bg` plugin은 런타임 보호장치로 유지하고,
+      이 readiness gate는 switchover 버튼을 누르기 전 운영 절차에서 호출한다.
+    </p>
+    <div class="grid-3">
+      <article class="card">
+        <span class="kicker">Build</span>
+        <h3>앱 내부 collector 구현</h3>
+        <p>AWS SDK RDS, 일반 MySQL JDBC, DNS resolve를 조합해 인스턴스 단위 readiness snapshot을 만든다.</p>
+      </article>
+      <article class="card">
+        <span class="kicker">Fanout</span>
+        <h3>권역 단위 API 구현</h3>
+        <p>EC2 tag 또는 운영계 service registry로 대상 인스턴스를 찾고 각 인스턴스의 readiness API를 호출한다.</p>
+      </article>
+      <article class="card">
+        <span class="kicker">Gate</span>
+        <h3>스위치오버 전 차단 조건 구현</h3>
+        <p>하나라도 실패하면 `allReady=false`로 switchover를 중단하고 사유를 로그/응답에 남긴다.</p>
+      </article>
+    </div>
+    <div class="callout">
+      <h3>중요 결론</h3>
+      <p>
+        `DescribeBlueGreenDeployments=AVAILABLE`만으로는 완전히 신뢰할 수 없다.
+        실제 검증에서 deployment가 `AVAILABLE`이어도 target DB instance가 `modifying`인 동안 switchover가 실패했다.
+        따라서 `DescribeDBInstances(source/target).DBInstanceStatus == available`은 선택이 아니라 필수 조건이다.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Wrapper 수집 완전 커버 보강 지시</h2>
+    <p class="section-lead">
+      이 섹션은 운영계 AI 구현자가 반드시 읽어야 하는 추가 지시다. 기존 readiness gate는 pre-switchover 판단에 충분히 강하지만,
+      AWS JDBC Wrapper 내부 준비 수집을 더 가깝게 커버하려면 아래 항목을 빠뜨리면 안 된다.
+    </p>
+    <div class="callout danger">
+      <h3>최종 목표 문장</h3>
+      <p>
+        운영계 구현은 "AWS에서 switchover 가능해 보인다"가 아니라,
+        "wrapper가 SOURCE/TARGET monitor로 준비 단계에서 수집하는 상태, topology, DNS/IP, corresponding node 정보를
+        애플리케이션 외부 gate에서도 독립적으로 재확인했다"는 수준까지 도달해야 한다.
+      </p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>wrapper 내부 수집/준비 항목</th>
+          <th>wrapper 근거</th>
+          <th>운영계 API 구현 요구</th>
+          <th>현재 test-for 기준</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>SOURCE monitor와 TARGET monitor를 각각 실행</td>
+          <td><code>BlueGreenStatusProvider.initMonitoring()</code>에서 SOURCE/TARGET <code>BlueGreenStatusMonitor</code>를 별도로 시작</td>
+          <td>source endpoint뿐 아니라 target endpoint도 직접 JDBC probe한다. 둘 다 metadata query와 DNS resolve가 가능해야 한다.</td>
+          <td class="red">보강 필요</td>
+        </tr>
+        <tr>
+          <td>Blue/Green status table 조회</td>
+          <td><code>BlueGreenStatusMonitor.collectStatus()</code>가 dialect의 <code>getBlueGreenStatusQuery()</code>를 실행</td>
+          <td>MySQL은 <code>mysql.rds_topology</code>, PostgreSQL은 <code>rds_tools.show_topology(...)</code> 또는 <code>pg_catalog.get_blue_green_fast_switchover_metadata(...)</code>를 dialect별로 분기한다.</td>
+          <td class="red">MySQL만 구현됨</td>
+        </tr>
+        <tr>
+          <td>HostListProvider topology 수집</td>
+          <td><code>BlueGreenStatusMonitor.collectTopology()</code>가 <code>hostListProvider.forceRefresh()</code> 호출</td>
+          <td>source/target row만 세지 말고 writer/reader topology를 role별로 분리해 expected writer count, reader count, endpoint set을 검증한다.</td>
+          <td class="red">부분 구현</td>
+        </tr>
+        <tr>
+          <td>시작 IP와 현재 IP 수집</td>
+          <td><code>collectHostIpAddresses()</code>, <code>updateIpAddressFlags()</code></td>
+          <td>각 endpoint의 DNS address set을 저장하고 source/target pair 간 IP가 겹치지 않는지 확인한다. 연속 호출 동안 IP set이 비정상적으로 흔들리면 실패 처리한다.</td>
+          <td class="green">대부분 구현됨</td>
+        </tr>
+        <tr>
+          <td>correspondingNodes 생성</td>
+          <td><code>BlueGreenStatusProvider.updateCorrespondingNodes()</code></td>
+          <td>writer pair뿐 아니라 reader pair도 mapping한다. reader 수가 다르면 wrapper처럼 round-robin 또는 writer fallback 규칙을 명시한다.</td>
+          <td class="red">단일 pair 중심</td>
+        </tr>
+        <tr>
+          <td>PREPARATION/IN_PROGRESS/POST 라우팅 생성</td>
+          <td><code>getStatusOfPreparation()</code>, <code>getStatusOfInProgress()</code>, <code>createPostRouting()</code></td>
+          <td>readiness API가 라우팅을 직접 구현하지 않는다. 대신 "이 영역은 wrapper 런타임 책임"으로 문서화하고, 운영계에는 wrapper bg plugin 활성화 검증만 둔다.</td>
+          <td class="green">의도적으로 제외</td>
+        </tr>
+        <tr>
+          <td>POST 이후 green DNS 제거, blue DNS update, green topology change 감지</td>
+          <td><code>updateDnsFlags()</code>, <code>getStatusOfCompleted()</code></td>
+          <td>pre-switchover gate에는 넣지 않는다. 별도 post-switchover verification API 또는 runbook으로 분리한다.</td>
+          <td class="green">사후 검증 영역</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>AI가 반드시 추가 구현해야 하는 v2 항목</h2>
+    <p class="section-lead">
+      운영계 소스에 반영할 때는 현재 v1 조건에 아래 v2 조건을 추가한다. 이 항목들이 들어가야 "wrapper 준비 수집을 거의 커버했다"고 말할 수 있다.
+    </p>
+    <div class="grid-3">
+      <article class="card">
+        <span class="kicker">V2-1</span>
+        <h3>Target direct JDBC probe</h3>
+        <p>
+          AWS SDK로 target DB endpoint를 확인한 뒤, target endpoint로 직접 일반 JDBC connection을 연다.
+          이 연결은 쓰기 검증을 하지 않는다. metadata 접근성, topology/status query 가능 여부, DNS/IP 상태만 확인한다.
+        </p>
+        <pre><code>targetProbeOk =
+  targetDbInstance.status == "available"
+  AND connect(targetEndpoint) succeeds
+  AND blueGreenMetadataReadable(targetConnection)
+  AND targetTopologyRows include TARGET role</code></pre>
+      </article>
+      <article class="card">
+        <span class="kicker">V2-2</span>
+        <h3>Reader topology mapping</h3>
+        <p>
+          source writer와 target writer만 맞추지 말고 reader endpoint 목록도 분리한다.
+          운영계에 reader가 없으면 writer-only topology로 명시하고, reader가 있으면 source reader마다 target reader 또는 target writer fallback을 mapping한다.
+        </p>
+        <pre><code>writerPairs = pair(sourceWriters, targetWriters)
+readerPairs = pairReadersOrFallbackToTargetWriter(
+  sourceReaders,
+  targetReaders,
+  targetWriter
+)</code></pre>
+      </article>
+      <article class="card">
+        <span class="kicker">V2-3</span>
+        <h3>Dialect abstraction</h3>
+        <p>
+          MySQL만 하드코딩하지 않는다. 운영 DB engine을 설정 또는 JDBC metadata로 판별하고,
+          engine별 blue/green metadata query와 writer check를 별도 strategy로 분리한다.
+        </p>
+        <pre><code>interface BlueGreenMetadataDialect {
+  boolean isSupported(Connection c);
+  String statusQuery();
+  String writerCheckQuery();
+  TopologySnapshot parse(ResultSet rs);
+}</code></pre>
+      </article>
+    </div>
+    <div class="callout">
+      <h3>v2 candidateReady 식</h3>
+      <pre><code>candidateReadyV2 =
+  awsReady
+  AND sourceProbe.ready
+  AND targetProbe.ready
+  AND sourceProbe.currentWriter
+  AND metadataDialectSupported
+  AND sourceTopologyReadable
+  AND targetTopologyReadable
+  AND sourceVisible
+  AND targetVisible
+  AND writerPairingOk
+  AND readerPairingOk
+  AND allPairIpsDistinct
+  AND dnsStableAcrossAttempts
+  AND wrapperBgPluginConfigured</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>AI 구현 산출물 상세 목록</h2>
+    <p class="section-lead">
+      운영계 AI는 아래 파일 단위로 구현한다. 기존 코드베이스의 package/name은 회사 표준에 맞춰 조정해도 되지만 책임은 분리해야 한다.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>구현 파일</th>
+          <th>필수 필드/메서드</th>
+          <th>완료 기준</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td><code>BlueGreenMetadataDialect</code></td>
+          <td><code>engine()</code>, <code>isStatusAvailable()</code>, <code>statusQuery()</code>, <code>writerCheckQuery()</code>, <code>parseTopology()</code></td>
+          <td>MySQL 구현과 PostgreSQL 구현을 같은 service에서 교체 가능</td>
+        </tr>
+        <tr>
+          <td><code>MysqlBlueGreenMetadataDialect</code></td>
+          <td><code>select @@hostname, @@read_only, connection_id()</code>, <code>select * from mysql.rds_topology</code></td>
+          <td>기존 test-for MySQL 경로와 호환</td>
+        </tr>
+        <tr>
+          <td><code>PostgresBlueGreenMetadataDialect</code></td>
+          <td><code>rds_tools.show_topology('aws_jdbc_driver-&lt;version&gt;')</code> 또는 <code>pg_catalog.get_blue_green_fast_switchover_metadata(...)</code></td>
+          <td>운영 DB가 PostgreSQL이면 MySQL query를 절대 실행하지 않음</td>
+        </tr>
+        <tr>
+          <td><code>BlueGreenEndpointProbe</code></td>
+          <td><code>probeSource()</code>, <code>probeTarget()</code>, <code>connectTimeout</code>, <code>socketTimeout</code>, <code>metadataTimeout</code></td>
+          <td>source와 target을 독립적으로 probe하고 실패 reason을 분리</td>
+        </tr>
+        <tr>
+          <td><code>BlueGreenTopologyMapper</code></td>
+          <td><code>sourceWriters</code>, <code>sourceReaders</code>, <code>targetWriters</code>, <code>targetReaders</code>, <code>correspondingNodes</code></td>
+          <td>writer pair와 reader pair를 모두 응답 JSON에 노출</td>
+        </tr>
+        <tr>
+          <td><code>BlueGreenDnsVerifier</code></td>
+          <td><code>addressesByEndpoint</code>, <code>distinctIpByPair</code>, <code>dnsStableAcrossAttempts</code></td>
+          <td>연속 readiness 호출 동안 DNS set이 비정상적으로 흔들리면 false</td>
+        </tr>
+        <tr>
+          <td><code>BlueGreenReadinessDecision</code></td>
+          <td><code>candidateReadyV2</code>, <code>blockingReasons[]</code>, <code>warnings[]</code>, <code>evidence</code></td>
+          <td>첫 번째 실패 reason 하나만이 아니라 전체 blocking reason 목록 제공</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>응답 JSON v2 계약</h2>
+    <p class="section-lead">
+      운영계 AI는 기존 응답을 유지하되 아래 세부 객체를 추가한다. 이렇게 해야 실패 시 "어느 계층에서 왜 막혔는지" 바로 찾을 수 있다.
+    </p>
+    <pre><code>{
+  "ready": false,
+  "candidateReady": false,
+  "candidateReadyV2": false,
+  "reason": "target direct JDBC metadata check failed",
+  "blockingReasons": [
+    {
+      "code": "TARGET_METADATA_UNREADABLE",
+      "layer": "DATABASE",
+      "message": "target endpoint connected but blue/green metadata query failed",
+      "retryable": true
+    }
+  ],
+  "awsDeployment": {
+    "deploymentReady": true,
+    "switchoverMembersReady": true,
+    "tasksReady": true,
+    "dbInstancesReady": true,
+    "sourceDbInstanceStatus": "available",
+    "targetDbInstanceStatus": "available"
+  },
+  "sourceProbe": {
+    "endpoint": "blue.example.rds.amazonaws.com",
+    "connectOk": true,
+    "currentWriter": true,
+    "metadataReadable": true,
+    "topologyRows": 2
+  },
+  "targetProbe": {
+    "endpoint": "blue-green-abc123.example.rds.amazonaws.com",
+    "connectOk": true,
+    "currentWriter": false,
+    "metadataReadable": true,
+    "topologyRows": 2
+  },
+  "topologyMapping": {
+    "writerPairingOk": true,
+    "readerPairingOk": true,
+    "sourceWriters": ["blue-writer.example"],
+    "targetWriters": ["green-writer.example"],
+    "sourceReaders": [],
+    "targetReaders": [],
+    "correspondingNodes": [
+      {
+        "sourceEndpoint": "blue-writer.example",
+        "targetEndpoint": "green-writer.example",
+        "role": "WRITER",
+        "paired": true,
+        "distinctIpAddresses": true
+      }
+    ]
+  },
+  "dns": {
+    "resolvable": true,
+    "dnsStableAcrossAttempts": true,
+    "allPairIpsDistinct": true
+  },
+  "runtimeGuard": {
+    "wrapperBgPluginConfigured": true,
+    "wrapperBgPluginRequired": true,
+    "readinessApiDoesNotReplaceWrapper": true
+  }
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>AI에게 그대로 줄 구현 프롬프트</h2>
+    <p class="section-lead">
+      아래 블록은 운영계 코드 수정 AI에게 그대로 전달할 수 있는 작업 지시다.
+    </p>
+    <pre><code>너는 운영계 Spring/Java 애플리케이션에 RDS Blue/Green pre-switchover readiness gate를 구현한다.
+
+절대 조건:
+1. AWS Advanced JDBC Wrapper 내부 서비스 객체, BlueGreenStatusProvider, BlueGreenStatusMonitor 인스턴스에 의존하지 않는다.
+2. AWS SDK, 일반 JDBC, DNS resolver, 운영계 service discovery만 사용한다.
+3. 기존 AWS JDBC Wrapper bg plugin은 datasource runtime 보호용으로 유지한다. readiness API가 wrapper를 대체하지 않는다.
+4. readiness API는 public internet에 노출하지 않는다.
+
+구현할 API:
+- POST /api/rds-bluegreen/readiness
+- POST /api/rds-bluegreen/regional-readiness
+
+반드시 구현할 collector:
+- RDS DescribeBlueGreenDeployments
+- RDS DescribeDBInstances(source/target)
+- source endpoint direct JDBC probe
+- target endpoint direct JDBC probe
+- MySQL metadata dialect
+- PostgreSQL metadata dialect
+- DNS/IP resolver
+- writer/reader topology mapper
+- corresponding node mapper
+- regional fanout target discovery
+
+ready=true 조건:
+- AWS deployment, tasks, switchover members ready
+- source/target DB instance available
+- source JDBC connect OK
+- target JDBC connect OK
+- source metadata readable
+- target metadata readable
+- source current connection writer
+- source and target topology visible
+- writer pairing OK
+- reader pairing OK or explicit writer-only topology
+- source/target pair IP distinct
+- DNS stable across attempts
+- required consecutive successes reached
+- all regional instances ready
+
+응답:
+- boolean 하나만 반환하지 말고 blockingReasons[], warnings[], sourceProbe, targetProbe, topologyMapping, dns, awsDeployment, runtimeGuard를 포함한다.
+
+테스트:
+- deployment PROVISIONING
+- deployment AVAILABLE but target DB modifying
+- target endpoint JDBC timeout
+- source metadata readable but target metadata unreadable
+- reader count mismatch
+- DNS resolve failure
+- source/target same IP
+- one instance not ready in regional fanout
+- all instances ready then real switchover succeeds</code></pre>
+  </section>
+
+  <section>
+    <h2>2. 운영계 대상 아키텍처</h2>
+    <p class="section-lead">
+      이 구조는 "권역 하나, 내부 여러 브랜드, 브랜드별 다중 인스턴스"를 기본 전제로 한다.
+      운영자는 global 또는 regional API 하나를 호출하고, API가 내부 앱 인스턴스 전체로 fanout한다.
+    </p>
+    <div class="diagram-wrap">
+      <pre class="mermaid">
+flowchart LR
+  Ops[Operator or pipeline] --> Regional[POST /api/rds-bluegreen/regional-readiness]
+  Regional --> Discovery[EC2 tag or service registry discovery]
+  Discovery --> A1[BRAND-A instance 1]
+  Discovery --> A2[BRAND-A instance 2]
+  Discovery --> B1[BRAND-B instance 1]
+  Discovery --> B2[BRAND-B instance 2]
+  Discovery --> C1[BRAND-C instance 1]
+  Discovery --> C2[BRAND-C instance 2]
+  A1 --> RDS[AWS RDS control plane]
+  A1 --> DB[(Source DB)]
+  A1 --> DNS[DNS resolver]
+  A2 --> RDS
+  B1 --> RDS
+  B2 --> RDS
+  C1 --> RDS
+  C2 --> RDS
+  Regional --> Decision{allReady?}
+  Decision -- yes --> Switch[Call switchover-blue-green-deployment]
+  Decision -- no --> Stop[Stop and show failed instances]
+      </pre>
+      <p class="source-note">Mermaid가 로드되지 않는 환경에서는 위 원본이 그대로 보인다.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. 구현해야 하는 API 계약</h2>
+    <p class="section-lead">
+      운영계에서는 내부망 전용 API로 노출한다. 외부 인터넷, 일반 사용자 트래픽 path, ALB health check 용도로 쓰지 않는다.
+    </p>
+    <div class="grid-2">
+      <article class="card">
+        <span class="kicker">Instance API</span>
+        <h3>POST /api/rds-bluegreen/readiness</h3>
+        <p>현재 앱 인스턴스 하나가 switchover 전에 준비됐는지 확인한다.</p>
+        <pre><code>POST /api/rds-bluegreen/readiness?attempts=5&amp;delayMs=1000
+Accept: application/json</code></pre>
+        <pre><code>{
+  "enabled": true,
+  "ready": true,
+  "candidateReady": true,
+  "consecutiveReady": 3,
+  "requiredConsecutive": 3,
+  "region": "KR",
+  "brand": "BRAND-A",
+  "instanceId": "i-...",
+  "bgdId": "bgd-...",
+  "awsApiSuccess": true,
+  "awsDeploymentReady": true,
+  "awsSwitchoverMembersReady": true,
+  "awsTasksReady": true,
+  "awsDbInstancesReady": true,
+  "dbConnectionOk": true,
+  "topologyReadable": true,
+  "sourceVisible": true,
+  "targetVisible": true,
+  "dnsResolvable": true,
+  "sourceTargetPairingOk": true,
+  "sourceTargetIpsDistinct": true,
+  "reason": "ready"
+}</code></pre>
+      </article>
+      <article class="card">
+        <span class="kicker">Regional API</span>
+        <h3>POST /api/rds-bluegreen/regional-readiness</h3>
+        <p>권역 내부의 모든 대상 인스턴스를 discovery한 뒤 fanout 호출한다.</p>
+        <pre><code>POST /api/rds-bluegreen/regional-readiness?attempts=5&amp;delayMs=1000
+Accept: application/json</code></pre>
+        <pre><code>{
+  "enabled": true,
+  "allReady": true,
+  "awsRegion": "ap-northeast-2",
+  "serviceRegion": "KR",
+  "totalInstances": 8,
+  "readyInstances": 8,
+  "notReadyInstances": 0,
+  "instancesByBrand": {
+    "BRAND-A": 2,
+    "BRAND-B": 2,
+    "BRAND-C": 2,
+    "BRAND-D": 2
+  },
+  "readyInstancesByBrand": {
+    "BRAND-A": 2,
+    "BRAND-B": 2,
+    "BRAND-C": 2,
+    "BRAND-D": 2
+  }
+}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. 구현 클래스와 책임</h2>
+    <p class="section-lead">
+      아래는 `test-for`에서 검증된 구조다. 운영계 프레임워크가 다르더라도 역할 분리는 유지한다.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>파일/컴포넌트</th>
+          <th>운영계에서 구현할 책임</th>
+          <th>핵심 규칙</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td><code>RdsBlueGreenReadinessController</code></td>
+          <td>인스턴스 단위 readiness endpoint. `attempts`, `delayMs` query parameter를 받는다.</td>
+          <td>POST만 허용. 내부망 인증/인가 적용.</td>
+        </tr>
+        <tr>
+          <td><code>RdsBlueGreenReadinessService</code></td>
+          <td>collector 결과를 최종 `candidateReady`, `ready`, `reason`으로 합성한다.</td>
+          <td>기본 3회 연속 `candidateReady=true`일 때만 `ready=true`.</td>
+        </tr>
+        <tr>
+          <td><code>RdsBlueGreenInternalReadinessCollector</code></td>
+          <td>RDS control plane, DB metadata, DNS를 수집한다.</td>
+          <td>wrapper 내부 객체를 호출하지 않는다. AWS SDK와 일반 JDBC만 사용.</td>
+        </tr>
+        <tr>
+          <td><code>RdsBlueGreenRegionalReadinessController</code></td>
+          <td>권역 단위 fanout endpoint.</td>
+          <td>운영자는 가능하면 이 API만 호출한다.</td>
+        </tr>
+        <tr>
+          <td><code>RdsBlueGreenRegionalReadinessService</code></td>
+          <td>EC2/service registry discovery, private IP fanout, 브랜드별 summary 생성.</td>
+          <td>대상 0개면 `allReady=false`.</td>
+        </tr>
+        <tr>
+          <td><code>RdsBlueGreen*Snapshot</code> records</td>
+          <td>수집 결과를 JSON 응답/로그로 보존한다.</td>
+          <td>실패 원인은 boolean만 두지 말고 `reason`, `errorClass`, `errorMessage`까지 둔다.</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. 판정식</h2>
+    <p class="section-lead">
+      구현자는 아래 식을 그대로 구현한다. 이 조건은 인스턴스 하나의 `candidateReady` 판정이다.
+    </p>
+    <div class="callout">
+      <pre><code>candidateReady =
+  awsReady
+  AND dbConnectionOk
+  AND currentWriter
+  AND topologyReadable
+  AND sourceVisible
+  AND targetVisible
+  AND dnsResolvable
+  AND sourceTargetPairingOk
+  AND sourceTargetIpsDistinct
+
+ready =
+  candidateReady가 requiredConsecutive 횟수만큼 연속 성공</code></pre>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>조건</th>
+          <th>구현 방법</th>
+          <th>실패 reason 예시</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td><code>awsReady</code></td>
+          <td>deployment, switchover members, tasks, source/target DB instance가 모두 준비됐는지 확인</td>
+          <td><code>source or target DB instance is not available</code></td>
+        </tr>
+        <tr>
+          <td><code>dbConnectionOk</code></td>
+          <td>일반 MySQL JDBC로 source endpoint 접속</td>
+          <td><code>database metadata check failed</code></td>
+        </tr>
+        <tr>
+          <td><code>currentWriter</code></td>
+          <td><code>select @@read_only</code>가 false인지 확인</td>
+          <td><code>current regular JDBC connection is not writer</code></td>
+        </tr>
+        <tr>
+          <td><code>topologyReadable</code></td>
+          <td><code>mysql.rds_topology</code> row 수가 최소 2 이상인지 확인</td>
+          <td><code>mysql.rds_topology rows 1 &lt; 2</code></td>
+        </tr>
+        <tr>
+          <td><code>sourceVisible / targetVisible</code></td>
+          <td>topology role에 SOURCE/TARGET row가 있는지 확인</td>
+          <td><code>target topology row is not visible yet</code></td>
+        </tr>
+        <tr>
+          <td><code>dnsResolvable</code></td>
+          <td>topology endpoint별 <code>InetAddress.getAllByName</code> 수행</td>
+          <td><code>one or more topology endpoints are not DNS-resolvable</code></td>
+        </tr>
+        <tr>
+          <td><code>sourceTargetPairingOk</code></td>
+          <td>source endpoint와 target endpoint가 같은 논리 노드의 pair인지 확인</td>
+          <td><code>source and target topology rows are not logically paired</code></td>
+        </tr>
+        <tr>
+          <td><code>sourceTargetIpsDistinct</code></td>
+          <td>source/target DNS 결과 IP set이 서로 disjoint인지 확인</td>
+          <td><code>source and target topology endpoints do not resolve to distinct IP addresses</code></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. AWS SDK 수집 규칙</h2>
+    <p class="section-lead">
+      AWS JDBC Wrapper 내부 모니터링 객체를 쓰지 않고 운영계 앱이 직접 수집한다.
+    </p>
+    <div class="grid-2">
+      <article class="card">
+        <span class="kicker">DescribeBlueGreenDeployments</span>
+        <h3>대상 deployment 찾기</h3>
+        <ul class="check-list">
+          <li>우선순위 1: `RDS_BG_DEPLOYMENT_ID`로 정확히 조회한다.</li>
+          <li>우선순위 2: `RDS_BG_SOURCE_ARN`, `RDS_BG_TARGET_ARN` filter로 찾는다.</li>
+          <li>pagination marker를 끝까지 따라간다.</li>
+          <li>status는 `AVAILABLE` 또는 switchover 이후 관측 목적의 `SWITCHOVER_COMPLETED`를 ready로 본다.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <span class="kicker">DescribeDBInstances</span>
+        <h3>source/target 실제 DB 상태 확인</h3>
+        <ul class="check-list">
+          <li>deployment의 `source`, `target` ARN에서 DB instance identifier를 추출한다.</li>
+          <li>각 identifier에 대해 `DescribeDBInstances`를 호출한다.</li>
+          <li>source와 target의 `DBInstanceStatus`가 모두 `available`이어야 한다.</li>
+          <li>이 조건이 없으면 deployment `AVAILABLE`인데 switchover 실패하는 구간을 막지 못한다.</li>
+        </ul>
+      </article>
+    </div>
+    <pre><code>awsDeploymentReady =
+  deployment.status in ["AVAILABLE", "SWITCHOVER_COMPLETED"]
+
+switchoverMembersReady =
+  all member.status in ["AVAILABLE", "SWITCHOVER_COMPLETED"]
+
+tasksReady =
+  all task.status == "COMPLETED"
+
+dbInstancesReady =
+  sourceDbInstance.status == "available"
+  AND targetDbInstance.status == "available"</code></pre>
+  </section>
+
+  <section>
+    <h2>7. DB와 DNS 수집 규칙</h2>
+    <div class="grid-2">
+      <article class="card">
+        <span class="kicker">JDBC</span>
+        <h3>일반 MySQL JDBC로 접속</h3>
+        <p>wrapper datasource를 타지 않는 독립 connection을 사용한다. readiness API 자체가 wrapper 내부 객체에 묶이면 운영 gate의 독립성이 떨어진다.</p>
+        <pre><code>select @@hostname, @@read_only, connection_id();
+
+select version, endpoint, port, status, role
+from mysql.rds_topology
+order by role, endpoint;</code></pre>
+      </article>
+      <article class="card">
+        <span class="kicker">DNS</span>
+        <h3>source/target endpoint resolve</h3>
+        <p>`mysql.rds_topology`에서 받은 endpoint를 OS/JVM resolver로 해석하고 IP set을 저장한다.</p>
+        <pre><code>sourceAddresses = resolve(source.endpoint)
+targetAddresses = resolve(target.endpoint)
+sourceTargetIpsDistinct = disjoint(sourceAddresses, targetAddresses)</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>8. 운영 설정 키</h2>
+    <p class="section-lead">
+      운영계에서는 secret manager, parameter store, deployment variable 등 회사 표준 방식으로 주입한다.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>환경변수</th>
+          <th>필수 여부</th>
+          <th>설명</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr><td><code>RDS_BG_AWS_REGION</code></td><td>필수</td><td>AWS SDK region. 예: <code>ap-northeast-2</code></td></tr>
+        <tr><td><code>RDS_BG_DEPLOYMENT_ID</code></td><td>권장 필수</td><td>Blue/Green deployment identifier. 가장 정확한 대상 지정 방식.</td></tr>
+        <tr><td><code>RDS_BG_SOURCE_ARN</code></td><td>대체 가능</td><td>deployment ID를 못 넘길 때 source ARN filter로 사용.</td></tr>
+        <tr><td><code>RDS_BG_TARGET_ARN</code></td><td>선택</td><td>대상 deployment 모호성을 줄이는 보조 filter.</td></tr>
+        <tr><td><code>RDS_BG_HOST</code></td><td>필수</td><td>현재 서비스가 바라보는 source writer endpoint.</td></tr>
+        <tr><td><code>RDS_BG_PORT</code></td><td>필수</td><td>기본 3306.</td></tr>
+        <tr><td><code>RDS_BG_DATABASE</code></td><td>필수</td><td>readiness query를 실행할 database.</td></tr>
+        <tr><td><code>RDS_BG_USERNAME</code></td><td>필수</td><td>readiness 전용 계정 권장.</td></tr>
+        <tr><td><code>RDS_BG_PASSWORD</code></td><td>필수</td><td>secret manager에서 주입.</td></tr>
+        <tr><td><code>RDS_BG_SERVICE_REGION</code></td><td>필수</td><td>서비스 권역 태그. 예: <code>KR</code>.</td></tr>
+        <tr><td><code>RDS_BG_SERVICE_BRAND</code></td><td>필수</td><td>브랜드 구분. 예: <code>BRAND-A</code>.</td></tr>
+        <tr><td><code>RDS_BG_INSTANCE_ID</code></td><td>필수</td><td>EC2 instance id 또는 pod name.</td></tr>
+        <tr><td><code>RDS_BG_READINESS_REQUIRED_CONSECUTIVE</code></td><td>권장</td><td>기본 3. 흔들리는 상태를 막기 위한 연속 성공 횟수.</td></tr>
+        <tr><td><code>RDS_BG_REGIONAL_FANOUT_ENABLED</code></td><td>권장</td><td>권역 fanout 사용 여부.</td></tr>
+        <tr><td><code>RDS_BG_REGIONAL_FANOUT_TAG_KEY</code></td><td>EC2 방식 필수</td><td>대상 discovery tag key. 기본 <code>RdsBlueGreenReadiness</code>.</td></tr>
+        <tr><td><code>RDS_BG_REGIONAL_FANOUT_REGION_TAG_KEY</code></td><td>EC2 방식 필수</td><td>권역 tag key. 기본 <code>ServiceRegion</code>.</td></tr>
+        <tr><td><code>RDS_BG_REGIONAL_FANOUT_BRAND_TAG_KEY</code></td><td>EC2 방식 필수</td><td>브랜드 tag key. 기본 <code>ServiceBrand</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>9. IAM, DB 권한, 네트워크</h2>
+    <div class="grid-3">
+      <article class="card">
+        <span class="kicker">IAM</span>
+        <h3>최소 AWS 권한</h3>
+        <pre><code>{
+  "Effect": "Allow",
+  "Action": [
+    "rds:DescribeBlueGreenDeployments",
+    "rds:DescribeDBInstances",
+    "ec2:DescribeInstances"
+  ],
+  "Resource": "*"
+}</code></pre>
+      </article>
+      <article class="card">
+        <span class="kicker">DB</span>
+        <h3>readiness 계정 권한</h3>
+        <pre><code>select @@hostname, @@read_only, connection_id();
+select version, endpoint, port, status, role
+from mysql.rds_topology;</code></pre>
+      </article>
+      <article class="card">
+        <span class="kicker">Network</span>
+        <h3>내부 통신</h3>
+        <ul class="check-list">
+          <li>regional API가 앱 인스턴스 private IP의 8080 또는 내부 service port에 접근 가능해야 한다.</li>
+          <li>RDS endpoint 3306 접근이 가능해야 한다.</li>
+          <li>AWS SDK endpoint 또는 VPC endpoint 접근이 가능해야 한다.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>10. 로깅과 증적</h2>
+    <p class="section-lead">
+      운영계 적용의 핵심은 "왜 switchover를 허용했는지"를 남기는 것이다.
+    </p>
+    <div class="grid-2">
+      <article class="card">
+        <h3>인스턴스 상세 로그</h3>
+        <pre><code>RDS_BLUE_GREEN_READINESS
+enabled=true ready=true candidateReady=true
+consecutiveReady=3 requiredConsecutive=3
+region=KR brand=BRAND-A instanceId=i-...
+bgdId=bgd-...
+awsApiSuccess=true awsDeploymentReady=true
+awsSwitchoverMembersReady=true awsTasksReady=true awsDbInstancesReady=true
+dbConnectionOk=true topologyReadable=true topologyCount=2
+sourceVisible=true targetVisible=true dnsResolvable=true
+sourceTargetPairingOk=true sourceTargetIpsDistinct=true
+reason="ready"</code></pre>
+      </article>
+      <article class="card">
+        <h3>권역 요약 로그</h3>
+        <pre><code>RDS_BLUE_GREEN_READINESS_SUMMARY
+enabled=true allReady=true
+awsRegion=ap-northeast-2 serviceRegion=KR
+totalInstances=8 readyInstances=8 notReadyInstances=0
+instancesByBrand={BRAND-A=2, BRAND-B=2, BRAND-C=2, BRAND-D=2}
+readyInstancesByBrand={BRAND-A=2, BRAND-B=2, BRAND-C=2, BRAND-D=2}</code></pre>
+      </article>
+    </div>
+  </section>
+
+  <section>
+    <h2>11. 구현 순서</h2>
+    <ol class="task-list">
+      <li><b>의존성 추가</b>AWS SDK BOM, RDS client, EC2 client를 추가한다. 기존 DB driver와 JSON mapper는 서비스 표준을 사용한다.</li>
+      <li><b>설정 모델 추가</b>RDS API, regional fanout, readiness log, DB 접속 정보를 properties로 만든다.</li>
+      <li><b>인스턴스 readiness API 구현</b>controller, service, collector, result records를 추가한다.</li>
+      <li><b>RDS control plane 수집 구현</b>`DescribeBlueGreenDeployments`와 `DescribeDBInstances`를 모두 구현한다.</li>
+      <li><b>DB metadata 수집 구현</b>일반 JDBC로 writer 여부와 `mysql.rds_topology`를 확인한다.</li>
+      <li><b>DNS와 pair 검증 구현</b>source/target endpoint resolve, logical pairing, IP distinctness를 구현한다.</li>
+      <li><b>regional fanout 구현</b>EC2 tag 또는 회사 service registry로 대상 인스턴스를 찾고 private endpoint로 fanout한다.</li>
+      <li><b>로그/응답 증적 구현</b>인스턴스 상세 로그와 권역 summary 로그를 남긴다.</li>
+      <li><b>보안 적용</b>내부망 제한, 운영자/파이프라인 인증, rate limit, audit log를 적용한다.</li>
+      <li><b>실제 switchover rehearsal</b>staging에서 `allReady=true` 직후 switchover를 수행하고 `SWITCHOVER_COMPLETED`까지 확인한다.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>12. 테스트 케이스</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>케이스</th>
+          <th>입력/상태</th>
+          <th>기대 결과</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr><td>deployment provisioning</td><td>BGD status가 `PROVISIONING`</td><td>`ready=false`, reason에 deployment not available</td></tr>
+        <tr><td>target DB modifying</td><td>BGD `AVAILABLE`, target DB instance `modifying`</td><td>`awsDbInstancesReady=false`, switchover 차단</td></tr>
+        <tr><td>task in progress</td><td>하나 이상의 preparation task `IN_PROGRESS`</td><td>`awsTasksReady=false`</td></tr>
+        <tr><td>topology unreadable</td><td>`mysql.rds_topology` 권한 없음 또는 row 부족</td><td>`topologyReadable=false`</td></tr>
+        <tr><td>not writer</td><td>`@@read_only=true`</td><td>`current regular JDBC connection is not writer`</td></tr>
+        <tr><td>DNS failure</td><td>source/target endpoint 중 하나 resolve 실패</td><td>`dnsResolvable=false`</td></tr>
+        <tr><td>pair mismatch</td><td>source/target row 논리 pair 불일치</td><td>`sourceTargetPairingOk=false`</td></tr>
+        <tr><td>same IP</td><td>source/target IP set이 겹침</td><td>`sourceTargetIpsDistinct=false`</td></tr>
+        <tr><td>partial app failure</td><td>8대 중 1대 API timeout</td><td>`allReady=false`, `notReadyInstances=1`</td></tr>
+        <tr><td>all ready</td><td>8대 모두 readiness true</td><td>`allReady=true`, switchover 허용</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>13. 실제 검증 증거</h2>
+    <div class="grid-2">
+      <article class="card">
+        <span class="kicker">2026-07-07</span>
+        <h3>4-node fanout</h3>
+        <ul class="check-list">
+          <li>권역: `ap-northeast-2`</li>
+          <li>브랜드: `BRAND-A=2`, `BRAND-B=2`</li>
+          <li>Blue/Green deployment: `bgd-example-4node`</li>
+          <li>초기 `PROVISIONING` 상태에서 `allReady=false` 확인</li>
+          <li>`DescribeDBInstances` 조건 추가 후 4/4 ready, switchover `SWITCHOVER_COMPLETED`</li>
+        </ul>
+      </article>
+      <article class="card">
+        <span class="kicker">2026-07-08</span>
+        <h3>8-node fanout</h3>
+        <ul class="check-list">
+          <li>권역: `ap-northeast-2`</li>
+          <li>브랜드: `BRAND-A=2`, `BRAND-B=2`, `BRAND-C=2`, `BRAND-D=2`</li>
+          <li>Blue/Green deployment: `bgd-example-8node`</li>
+          <li>10:11:05 KST `allReady=true`, 8/8 ready</li>
+          <li>10:11:43 KST `SWITCHOVER_COMPLETED`</li>
+        </ul>
+      </article>
+    </div>
+    <pre><code>{
+  "allReady": true,
+  "totalInstances": 8,
+  "readyInstances": 8,
+  "notReadyInstances": 0,
+  "readyInstancesByBrand": {
+    "BRAND-A": 2,
+    "BRAND-B": 2,
+    "BRAND-C": 2,
+    "BRAND-D": 2
+  }
+}</code></pre>
+  </section>
+
+  <section>
+    <h2>14. 운영 런북</h2>
+    <ol class="task-list">
+      <li><b>Blue/Green deployment 생성</b>AWS CLI, console, IaC 중 운영 표준 방식으로 생성한다.</li>
+      <li><b>deployment ID 전파</b>모든 앱 인스턴스에 같은 `RDS_BG_DEPLOYMENT_ID`가 들어가야 한다.</li>
+      <li><b>AWS 상태 1차 대기</b>deployment `AVAILABLE`까지 기다리되, 이것만으로 switchover하지 않는다.</li>
+      <li><b>regional readiness 호출</b>`POST /api/rds-bluegreen/regional-readiness?attempts=5&amp;delayMs=1000` 호출.</li>
+      <li><b>증적 저장</b>응답 JSON과 `RDS_BLUE_GREEN_READINESS_SUMMARY` 로그를 저장한다.</li>
+      <li><b>allReady 확인</b>`allReady=true`, `notReadyInstances=0`, 브랜드별 expected count 일치 확인.</li>
+      <li><b>switchover 실행</b>가능하면 readiness 성공 직후 자동으로 `switchover-blue-green-deployment` 호출한다.</li>
+      <li><b>완료 확인</b>AWS 상태가 `SWITCHOVER_COMPLETED`인지 확인한다.</li>
+      <li><b>사후 검증</b>앱 write/read smoke test, DB writer 확인, wrapper bg plugin 런타임 로그를 확인한다.</li>
+      <li><b>cleanup 계획</b>old blue, 스냅샷, 수동 생성 리소스, Terraform drift를 별도 절차로 정리한다.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>15. 절대 하지 말아야 할 것</h2>
+    <div class="grid-2">
+      <article class="callout danger">
+        <h3>이 API만으로 무장애를 보장한다고 표현하지 말 것</h3>
+        <p>이 장치는 switchover 전 gate다. switchover 중 JDBC connection/query 보호는 AWS JDBC Wrapper `bg` plugin 또는 동등한 런타임 전략이 맡는다.</p>
+      </article>
+      <article class="callout danger">
+        <h3>외부 공개 API로 노출하지 말 것</h3>
+        <p>DB endpoint, deployment identifier, instance id, 내부 상태가 응답에 들어간다. 내부망과 운영 권한으로 제한해야 한다.</p>
+      </article>
+      <article class="callout warn">
+        <h3>대상 인스턴스 수를 검증 없이 넘어가지 말 것</h3>
+        <p>`allReady=true`여도 discovery 대상 수가 기대값보다 적으면 운영자가 모르는 누락이다. 브랜드별 expected count 검증을 runbook에 넣는다.</p>
+      </article>
+      <article class="callout warn">
+        <h3>deployment ID 전파를 수동 기억에 맡기지 말 것</h3>
+        <p>모든 앱 인스턴스가 같은 BGD ID를 보도록 pipeline 변수, SSM parameter, config refresh 절차를 명확히 둔다.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      기준 소스: `test-for`의 `com.test.replication.rdsbluegreen` 패키지, `application-rds-bluegreen.yml`,
+      `infra/rds-bluegreen` Terraform/검증 문서. 작성일: 2026-07-08.
+    </p>
+  </footer>
+</main>
+
+<script type="module">
+  try {
+    const mermaid = await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs");
+    mermaid.default.initialize({ startOnLoad: false, securityLevel: "loose", theme: "base" });
+    await mermaid.default.run({ querySelector: ".mermaid" });
+  } catch (error) {
+    document.documentElement.classList.add("mermaid-unavailable");
+  }
+</script>
+<script>
+  const root = document.documentElement;
+  const themeToggle = document.querySelector(".theme-toggle");
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "light" || savedTheme === "dark") {
+    root.dataset.theme = savedTheme;
+  }
+
+  const currentTheme = () => {
+    if (root.dataset.theme) return root.dataset.theme;
+    return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  };
+
+  const syncThemeToggle = () => {
+    const dark = currentTheme() === "dark";
+    themeToggle.setAttribute("aria-pressed", String(dark));
+    themeToggle.textContent = dark ? "라이트 모드" : "다크 모드";
+  };
+
+  themeToggle.addEventListener("click", () => {
+    const next = currentTheme() === "dark" ? "light" : "dark";
+    root.dataset.theme = next;
+    localStorage.setItem("theme", next);
+    syncThemeToggle();
+  });
+  syncThemeToggle();
+
+  const sections = Array.from(document.querySelectorAll("main > section"));
+  const progress = document.querySelector("#readProgress");
+  sections.forEach((section, index) => {
+    section.id ||= `section-${index + 1}`;
+  });
+
+  const dock = document.createElement("nav");
+  dock.className = "section-dock";
+  dock.setAttribute("aria-label", "섹션 이동");
+  dock.innerHTML = '<div class="dock-inner"></div>';
+  const dockInner = dock.querySelector(".dock-inner");
+  sections.forEach((section) => {
+    const link = document.createElement("a");
+    link.className = "chapter-link";
+    link.href = `#${section.id}`;
+    link.textContent = section.querySelector("h2").textContent.trim();
+    dockInner.appendChild(link);
+  });
+  document.querySelector("header").insertAdjacentElement("afterend", dock);
+
+  const links = Array.from(document.querySelectorAll(".chapter-link"));
+  const update = () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    progress.style.width = `${max <= 0 ? 0 : (window.scrollY / max) * 100}%`;
+    let active = 0;
+    sections.forEach((section, index) => {
+      if (section.getBoundingClientRect().top <= 132) active = index;
+    });
+    links.forEach((link, index) => link.classList.toggle("is-active", index === active));
+  };
+
+  const revealTargets = Array.from(document.querySelectorAll(".card, .callout, .diagram-wrap, table, pre, .task-list li"));
+  revealTargets.forEach((target) => target.classList.add("reveal"));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: .12 });
+  revealTargets.forEach((target) => observer.observe(target));
+  window.addEventListener("scroll", update, { passive: true });
+  update();
+</script>
+</body>
+</html>
