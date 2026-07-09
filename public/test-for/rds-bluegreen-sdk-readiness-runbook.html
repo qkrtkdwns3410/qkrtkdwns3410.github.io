@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RDS Blue/Green SDK Readiness Runbook</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #FFFFFF;
+      --panel: #F7F7F8;
+      --ink: #111111;
+      --muted: #5E636E;
+      --line: #D7DAE0;
+      --accent: #E4002B;
+      --accent-ink: #FFFFFF;
+      --code: #F7F7F8;
+      --ok: #0B7A4B;
+      --warn: #B45309;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0B0B0C;
+      --panel: #151517;
+      --ink: #F5F5F6;
+      --muted: #B7BAC2;
+      --line: #34363B;
+      --accent: #FF4F00;
+      --accent-ink: #0B0B0C;
+      --code: #17181B;
+      --ok: #3DDC97;
+      --warn: #FFB800;
+    }
+    * {
+      box-sizing: border-box;
+      min-width: 0;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 72px 72px,
+        linear-gradient(0deg, var(--line) 1px, transparent 1px) 0 0 / 72px 72px,
+        var(--bg);
+      color: var(--ink);
+      font-family: "Helvetica Neue", "Noto Sans KR", Arial, sans-serif;
+      line-height: 1.68;
+      letter-spacing: 0;
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    .wrap {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 28px 0 90px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      border-bottom: 1px solid var(--ink);
+      padding-bottom: 14px;
+      font-size: .92rem;
+      font-weight: 800;
+    }
+    .topbar a { text-decoration: none; }
+    button {
+      min-height: 40px;
+      padding: 8px 13px;
+      border: 1px solid var(--ink);
+      background: var(--bg);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: 32px;
+      align-items: end;
+      padding: 58px 0 34px;
+      border-bottom: 1px solid var(--ink);
+    }
+    .folio {
+      color: var(--accent);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+    h1 {
+      margin: 12px 0 0;
+      max-width: 860px;
+      font-size: clamp(3rem, 8vw, 6.8rem);
+      line-height: .92;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+    .summary {
+      border-left: 1px solid var(--ink);
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: .98rem;
+      font-weight: 650;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 42px;
+      align-items: start;
+    }
+    nav {
+      position: sticky;
+      top: 18px;
+      padding-top: 38px;
+      font-size: .86rem;
+      font-weight: 800;
+    }
+    nav a {
+      display: block;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      text-decoration: none;
+    }
+    nav a:hover,
+    nav a:focus-visible { color: var(--accent); outline: none; }
+    article { padding-top: 38px; }
+    section {
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      gap: 24px;
+      padding: 34px 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 20px;
+    }
+    .secno {
+      color: var(--accent);
+      font-size: clamp(2rem, 5vw, 4rem);
+      line-height: .9;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+    h2 {
+      margin: 0 0 18px;
+      font-size: clamp(1.7rem, 3vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 1.1rem;
+      line-height: 1.3;
+    }
+    p { margin: 0 0 14px; color: var(--ink); }
+    .muted { color: var(--muted); }
+    .note {
+      margin: 18px 0;
+      padding: 16px;
+      border: 1px solid var(--ink);
+      background: var(--panel);
+      font-weight: 700;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      border-left: 1px solid var(--ink);
+      border-top: 1px solid var(--ink);
+      margin: 16px 0;
+    }
+    .cell {
+      padding: 16px;
+      border-right: 1px solid var(--ink);
+      border-bottom: 1px solid var(--ink);
+      background: color-mix(in srgb, var(--bg) 90%, var(--panel));
+    }
+    .cell b { display: block; margin-bottom: 8px; }
+    pre {
+      margin: 16px 0;
+      padding: 16px;
+      overflow-x: auto;
+      max-width: 100%;
+      border: 1px solid var(--ink);
+      background: var(--code);
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: .9rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    code {
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: .94em;
+      overflow-wrap: anywhere;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      border: 1px solid var(--ink);
+      background: var(--bg);
+      table-layout: fixed;
+    }
+    th, td {
+      padding: 12px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+    th {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: var(--bg);
+    }
+    ul, ol { margin: 0 0 16px; padding-left: 1.3rem; }
+    li + li { margin-top: 7px; }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-left: 1px solid var(--ink);
+      border-top: 1px solid var(--ink);
+      margin: 18px 0;
+    }
+    .flow div {
+      min-height: 90px;
+      padding: 14px;
+      border-right: 1px solid var(--ink);
+      border-bottom: 1px solid var(--ink);
+      font-weight: 850;
+      background: var(--panel);
+    }
+    .flow div:nth-child(2n) { background: var(--bg); }
+    .flow strong { color: var(--accent); }
+    @media (max-width: 940px) {
+      header, .layout, section { grid-template-columns: 1fr; }
+      nav { position: static; padding-top: 20px; }
+      .summary { border-left: 0; padding-left: 0; }
+      .flow, .grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .wrap { width: min(100% - 28px, 1180px); }
+    }
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a href="./index.html">RDS Blue/Green 문서</a>
+    <button class="theme-toggle" type="button" aria-pressed="false">다크 모드</button>
+  </div>
+  <header>
+    <div>
+      <div class="folio">01 / SDK READINESS RUNBOOK</div>
+      <h1>SDK로 전환 전 준비 상태를 확인한다</h1>
+    </div>
+    <p class="summary">
+      MySQL Single RDS Instance 기준으로 AWS SDK가 Blue/Green deployment, SOURCE/TARGET ARN,
+      switchover status, endpoint, port, DB instance 상태를 수집하는 흐름을 정리한다.
+    </p>
+  </header>
+  <div class="layout">
+    <nav aria-label="문서 목차">
+      <a href="#purpose">00 목적</a>
+      <a href="#apis">01 API</a>
+      <a href="#flow">02 SDK 조회 흐름</a>
+      <a href="#verify">03 검증 순서</a>
+      <a href="#iam">04 IAM</a>
+    </nav>
+    <article>
+      <section id="purpose">
+        <div class="secno">00</div>
+        <div>
+          <h2>목적</h2>
+          <p>이 구현은 JDBC Wrapper 내부 메타데이터 조회 대신 AWS RDS Control Plane API로 Blue/Green 상태를 확인한다.</p>
+          <div class="grid">
+            <div class="cell"><b>SDK API 역할</b>배포 존재 여부, role별 ARN, switchover status, endpoint, port, DB instance 상태 확인.</div>
+            <div class="cell"><b>Wrapper 역할</b>runtime JDBC call 보호, connect/execute suspend, reroute, 기존 blue connection 정리.</div>
+          </div>
+          <p class="note">이 API는 AWS JDBC Wrapper `bg` plugin을 대체하지 않는다. Switchover 전 fleet readiness gate로 사용한다.</p>
+        </div>
+      </section>
+
+      <section id="apis">
+        <div class="secno">01</div>
+        <div>
+          <h2>로컬 API와 Fan-out API</h2>
+          <h3>각 EC2 app instance가 제공하는 API</h3>
+          <pre><code>GET  /api/rds-bluegreen/sdk/status
+POST /api/rds-bluegreen/sdk/connection-check
+POST /api/rds-bluegreen/sdk/operation-probe</code></pre>
+          <h3>주요 query parameter</h3>
+          <pre><code>role=TARGET
+deploymentIdentifier=bgd-xxxxxxxx
+sourceArn=arn:aws:rds:ap-northeast-2:123456789012:db:source-db
+targetArn=arn:aws:rds:ap-northeast-2:123456789012:db:target-db</code></pre>
+          <h3>응답 주요 필드</h3>
+          <table>
+            <thead><tr><th>필드</th><th>의미</th></tr></thead>
+            <tbody>
+            <tr><td><code>deploymentStatus</code></td><td>RDS Blue/Green deployment 전체 상태.</td></tr>
+            <tr><td><code>memberStatus</code></td><td>선택한 SOURCE/TARGET resource의 switchover 상태.</td></tr>
+            <tr><td><code>tasksReady</code></td><td>Blue/Green 준비 task가 모두 완료됐는지 여부.</td></tr>
+            <tr><td><code>dbInstanceReady</code></td><td>선택한 DB instance가 <code>available</code> 상태인지 여부.</td></tr>
+            <tr><td><code>endpointIps</code></td><td>SDK가 선택한 endpoint를 DNS resolve한 IP 목록.</td></tr>
+            <tr><td><code>connection.hostIpMatchesExpectedEndpoint</code></td><td>설정된 JDBC host DNS가 expected endpoint DNS와 같은 IP를 보는지 여부.</td></tr>
+            <tr><td><code>shouldEvictPool</code></td><td>pool refresh 또는 eviction이 필요한지 여부.</td></tr>
+            <tr><td><code>shouldBlockWrites</code></td><td>write를 막아야 하는 상태인지 여부.</td></tr>
+            </tbody>
+          </table>
+          <h3>Coordinator fan-out API</h3>
+          <pre><code>POST /api/rds-bluegreen/sdk/fanout?region=KR&amp;brand=KIA&amp;role=TARGET&amp;deploymentIdentifier=bgd-xxxxxxxx
+POST /api/rds-bluegreen/sdk/fanout/operation-probe?region=KR&amp;brand=KIA&amp;driver=WRAPPER&amp;note=brand-check</code></pre>
+        </div>
+      </section>
+
+      <section id="flow">
+        <div class="secno">02</div>
+        <div>
+          <h2>SDK 조회 흐름</h2>
+          <div class="flow" aria-label="SDK 조회 흐름">
+            <div>1. <strong>DescribeBlueGreenDeployments</strong> 호출</div>
+            <div>2. SOURCE/TARGET ARN 선택</div>
+            <div>3. SwitchoverDetails에서 member status 확인</div>
+            <div>4. ARN에서 DB instance identifier 추출</div>
+            <div>5. <strong>DescribeDBInstances</strong> 호출</div>
+            <div>6. endpoint / port / DBInstanceStatus 확인</div>
+            <div>7. endpoint DNS resolve</div>
+            <div>8. configured JDBC host DNS와 비교</div>
+          </div>
+          <p>표준 JDBC API는 이미 만들어진 connection socket의 remote IP를 직접 노출하지 않는다. 따라서 이 구현은 configured JDBC host DNS와 SDK가 선택한 expected endpoint DNS를 비교한다.</p>
+          <p class="note">`DescribeBlueGreenDeployments.Status`가 `AVAILABLE`이어도 target DB instance가 아직 `modifying`일 수 있다. 그래서 TARGET role의 `DBInstanceStatus=available` 확인이 필요하다.</p>
+        </div>
+      </section>
+
+      <section id="verify">
+        <div class="secno">03</div>
+        <div>
+          <h2>검증 순서</h2>
+          <ol>
+            <li>Brand별 여러 EC2 app instance를 실행한다.</li>
+            <li>모든 instance가 같은 source RDS MySQL instance를 바라보게 한다.</li>
+            <li>RDS Blue/Green deployment를 생성한다.</li>
+            <li>각 local API를 반복 호출한다.</li>
+            <li>Coordinator의 global fan-out API를 반복 호출한다.</li>
+            <li>모든 target이 `deploymentStatus=AVAILABLE`, `memberStatus=AVAILABLE`, `tasksReady=true`, `dbInstanceReady=true`를 보고할 때까지 기다린다.</li>
+            <li>Switchover 전 SOURCE / TARGET role을 모두 확인한다.</li>
+            <li>RDS switchover를 수동 실행한다.</li>
+            <li>Switchover 중 operation probe를 계속 호출한다.</li>
+            <li>Plain MySQL JDBC와 AWS JDBC Wrapper `bg` 결과를 비교한다.</li>
+          </ol>
+          <pre><code>curl -X POST "http://{coordinator-private-ip}:8080/api/rds-bluegreen/sdk/fanout?region=KR&amp;brand=KIA&amp;role=TARGET&amp;deploymentIdentifier={bgd-id}"
+
+curl -X POST "http://{ec2-private-ip}:8080/api/rds-bluegreen/sdk/operation-probe?driver=WRAPPER&amp;note=switchover-watch"</code></pre>
+        </div>
+      </section>
+
+      <section id="iam">
+        <div class="secno">04</div>
+        <div>
+          <h2>IAM 권한</h2>
+          <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "rds:DescribeBlueGreenDeployments",
+        "rds:DescribeDBInstances"
+      ],
+      "Resource": "*"
+    }
+  ]
+}</code></pre>
+          <p class="muted">운영 환경에서는 계정, 리전, 태그 조건을 추가하는 방향을 검토한다.</p>
+        </div>
+      </section>
+    </article>
+  </div>
+</main>
+<script>
+  const root = document.documentElement;
+  const toggle = document.querySelector(".theme-toggle");
+  const saved = localStorage.getItem("rds-docs-theme");
+  if (saved === "dark") root.dataset.theme = "dark";
+  const sync = () => {
+    const dark = root.dataset.theme === "dark";
+    toggle.textContent = dark ? "라이트 모드" : "다크 모드";
+    toggle.setAttribute("aria-pressed", String(dark));
+  };
+  toggle.addEventListener("click", () => {
+    root.dataset.theme = root.dataset.theme === "dark" ? "" : "dark";
+    if (root.dataset.theme === "dark") localStorage.setItem("rds-docs-theme", "dark");
+    else localStorage.removeItem("rds-docs-theme");
+    sync();
+  });
+  sync();
+</script>
+</body>
+</html>

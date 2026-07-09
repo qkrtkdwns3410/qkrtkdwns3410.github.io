@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RDS Blue/Green SDK / Wrapper 비교 검증 결과</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #FFFFFF;
+      --panel: #F7F7F8;
+      --ink: #111111;
+      --muted: #5E636E;
+      --line: #D7DAE0;
+      --accent: #E4002B;
+      --accent-ink: #FFFFFF;
+      --code: #F7F7F8;
+      --ok: #0B7A4B;
+      --bad: #B91C1C;
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0B0B0C;
+      --panel: #151517;
+      --ink: #F5F5F6;
+      --muted: #B7BAC2;
+      --line: #34363B;
+      --accent: #FF4F00;
+      --accent-ink: #0B0B0C;
+      --code: #17181B;
+      --ok: #3DDC97;
+      --bad: #FF6B6B;
+    }
+    * {
+      box-sizing: border-box;
+      min-width: 0;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 72px 72px,
+        linear-gradient(0deg, var(--line) 1px, transparent 1px) 0 0 / 72px 72px,
+        var(--bg);
+      color: var(--ink);
+      font-family: "Helvetica Neue", "Noto Sans KR", Arial, sans-serif;
+      line-height: 1.68;
+      letter-spacing: 0;
+      overflow-x: hidden;
+    }
+    a { color: inherit; }
+    .wrap {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 28px 0 90px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      border-bottom: 1px solid var(--ink);
+      padding-bottom: 14px;
+      font-size: .92rem;
+      font-weight: 800;
+    }
+    .topbar a { text-decoration: none; }
+    button {
+      min-height: 40px;
+      padding: 8px 13px;
+      border: 1px solid var(--ink);
+      background: var(--bg);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 32px;
+      align-items: end;
+      padding: 58px 0 34px;
+      border-bottom: 1px solid var(--ink);
+    }
+    .folio {
+      color: var(--accent);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+    h1 {
+      margin: 12px 0 0;
+      max-width: 900px;
+      font-size: clamp(3rem, 8vw, 6.8rem);
+      line-height: .92;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+    .summary {
+      border-left: 1px solid var(--ink);
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: .98rem;
+      font-weight: 650;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 42px;
+      align-items: start;
+    }
+    nav {
+      position: sticky;
+      top: 18px;
+      padding-top: 38px;
+      font-size: .86rem;
+      font-weight: 800;
+    }
+    nav a {
+      display: block;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      text-decoration: none;
+    }
+    nav a:hover,
+    nav a:focus-visible { color: var(--accent); outline: none; }
+    article { padding-top: 38px; }
+    section {
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      gap: 24px;
+      padding: 34px 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 20px;
+    }
+    .secno {
+      color: var(--accent);
+      font-size: clamp(2rem, 5vw, 4rem);
+      line-height: .9;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+    h2 {
+      margin: 0 0 18px;
+      font-size: clamp(1.7rem, 3vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 1.1rem;
+      line-height: 1.3;
+    }
+    p { margin: 0 0 14px; color: var(--ink); }
+    .muted { color: var(--muted); }
+    .note {
+      margin: 18px 0;
+      padding: 16px;
+      border: 1px solid var(--ink);
+      background: var(--panel);
+      font-weight: 700;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border-left: 1px solid var(--ink);
+      border-top: 1px solid var(--ink);
+      margin: 18px 0;
+    }
+    .metric {
+      padding: 16px;
+      border-right: 1px solid var(--ink);
+      border-bottom: 1px solid var(--ink);
+      background: color-mix(in srgb, var(--bg) 90%, var(--panel));
+    }
+    .metric strong {
+      display: block;
+      color: var(--accent);
+      font-size: 2.3rem;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    pre {
+      margin: 16px 0;
+      padding: 16px;
+      overflow-x: auto;
+      max-width: 100%;
+      border: 1px solid var(--ink);
+      background: var(--code);
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: .9rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    code {
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: .94em;
+      overflow-wrap: anywhere;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      border: 1px solid var(--ink);
+      background: var(--bg);
+      table-layout: fixed;
+    }
+    th, td {
+      padding: 12px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+    th {
+      border-color: var(--ink);
+      background: var(--ink);
+      color: var(--bg);
+    }
+    .ok { color: var(--ok); font-weight: 900; }
+    .bad { color: var(--bad); font-weight: 900; }
+    ul, ol { margin: 0 0 16px; padding-left: 1.3rem; }
+    li + li { margin-top: 7px; }
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      border-left: 1px solid var(--ink);
+      border-top: 1px solid var(--ink);
+      margin: 18px 0;
+    }
+    .role {
+      padding: 16px;
+      border-right: 1px solid var(--ink);
+      border-bottom: 1px solid var(--ink);
+      background: var(--panel);
+    }
+    .role h3 { margin-top: 0; }
+    @media (max-width: 940px) {
+      header, .layout, section { grid-template-columns: 1fr; }
+      nav { position: static; padding-top: 20px; }
+      .summary { border-left: 0; padding-left: 0; }
+      .metrics, .role-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .wrap { width: min(100% - 28px, 1180px); }
+    }
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <div class="topbar">
+    <a href="./index.html">RDS Blue/Green 문서</a>
+    <button class="theme-toggle" type="button" aria-pressed="false">다크 모드</button>
+  </div>
+  <header>
+    <div>
+      <div class="folio">02 / COMPARISON RESULT</div>
+      <h1>SDK readiness와 Wrapper runtime 보호는 역할이 다르다</h1>
+    </div>
+    <p class="summary">
+      Single RDS MySQL Blue/Green switchover에서 Plain MySQL JDBC와 AWS JDBC Wrapper `bg` 경로를 비교한 결과 문서다.
+      실제 리소스 식별자는 공개 페이지 기준으로 샘플값으로 마스킹했다.
+    </p>
+  </header>
+  <div class="layout">
+    <nav aria-label="문서 목차">
+      <a href="#environment">00 검증 환경</a>
+      <a href="#readiness">01 Readiness 발견</a>
+      <a href="#probe">02 Probe 방식</a>
+      <a href="#result">03 결과 요약</a>
+      <a href="#interpretation">04 해석</a>
+      <a href="#fanout">05 Brand fan-out</a>
+    </nav>
+    <article>
+      <section id="environment">
+        <div class="secno">00</div>
+        <div>
+          <h2>검증 환경</h2>
+          <table>
+            <tbody>
+            <tr><th>Region</th><td><code>ap-northeast-2</code></td></tr>
+            <tr><th>RDS source</th><td><code>arn:aws:rds:ap-northeast-2:123456789012:db:rds-bg-wrapper-lab-blue</code></td></tr>
+            <tr><th>Blue/Green deployment</th><td><code>bgd-xxxxxxxxxxxxxxxx</code></td></tr>
+            <tr><th>최종 AWS 상태</th><td><code>SWITCHOVER_COMPLETED</code></td></tr>
+            </tbody>
+          </table>
+          <table>
+            <thead><tr><th>Brand</th><th>Instance</th><th>Private IP</th></tr></thead>
+            <tbody>
+            <tr><td>KIA</td><td><code>i-aaaaaaaaaaaaaaaaa</code></td><td><code>10.0.1.10</code></td></tr>
+            <tr><td>HYUNDAI</td><td><code>i-bbbbbbbbbbbbbbbbb</code></td><td><code>10.0.1.20</code></td></tr>
+            <tr><td>GENESIS</td><td><code>i-ccccccccccccccccc</code></td><td><code>10.0.2.10</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="readiness">
+        <div class="secno">01</div>
+        <div>
+          <h2>Deployment AVAILABLE만으로는 부족했다</h2>
+          <p>첫 번째 switchover 시도는 `DescribeBlueGreenDeployments` 기준 deployment 상태가 `AVAILABLE`이었지만 실패했다.</p>
+          <pre><code>InvalidBlueGreenDeploymentStateFault:
+DB instance rds-bg-wrapper-lab-blue-green-xxxxxx is not in available state</code></pre>
+          <p>당시 target DB instance 상태는 다음과 같았다.</p>
+          <pre><code>DBInstanceStatus=modifying</code></pre>
+          <p class="note">Readiness gate는 deployment 상태와 target DB instance 상태를 함께 확인해야 한다.</p>
+          <pre><code>DescribeBlueGreenDeployments.Status == AVAILABLE
+selected target DescribeDBInstances.DBInstanceStatus == available</code></pre>
+        </div>
+      </section>
+
+      <section id="probe">
+        <div class="secno">02</div>
+        <div>
+          <h2>Probe 방식</h2>
+          <p>각 EC2 instance는 같은 local API로 Plain MySQL JDBC와 AWS JDBC Wrapper 경로를 모두 실행했다.</p>
+          <pre><code>POST /api/rds-bluegreen/sdk/operation-probe?driver=MYSQL
+POST /api/rds-bluegreen/sdk/operation-probe?driver=WRAPPER</code></pre>
+          <p>각 probe는 switchover window 동안 180회 write를 시도했다.</p>
+          <div class="metrics">
+            <div class="metric"><strong>180</strong><span>driver별 write 시도 횟수</span></div>
+            <div class="metric"><strong>3</strong><span>검증 대상 app instance</span></div>
+            <div class="metric"><strong>2</strong><span>Plain MySQL JDBC / Wrapper 경로</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="result">
+        <div class="secno">03</div>
+        <div>
+          <h2>결과 요약</h2>
+          <table>
+            <thead>
+            <tr>
+              <th>Instance</th>
+              <th>Driver</th>
+              <th>Total</th>
+              <th>SQL failures</th>
+              <th>curl timeouts</th>
+              <th>Read-only errors</th>
+              <th>Communication errors</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr><td><code>i-aaaaaaaaaaaaaaaaa</code></td><td>MYSQL</td><td>180</td><td class="bad">17</td><td>4</td><td class="bad">17</td><td>0</td></tr>
+            <tr><td><code>i-aaaaaaaaaaaaaaaaa</code></td><td>WRAPPER</td><td>180</td><td class="ok">0</td><td>1</td><td class="ok">0</td><td>0</td></tr>
+            <tr><td><code>i-bbbbbbbbbbbbbbbbb</code></td><td>MYSQL</td><td>180</td><td class="bad">1</td><td>3</td><td class="bad">1</td><td>0</td></tr>
+            <tr><td><code>i-bbbbbbbbbbbbbbbbb</code></td><td>WRAPPER</td><td>180</td><td class="ok">0</td><td>1</td><td class="ok">0</td><td>0</td></tr>
+            <tr><td><code>i-ccccccccccccccccc</code></td><td>MYSQL</td><td>180</td><td class="bad">21</td><td>4</td><td class="bad">20</td><td>1</td></tr>
+            <tr><td><code>i-ccccccccccccccccc</code></td><td>WRAPPER</td><td>180</td><td class="ok">0</td><td>1</td><td class="ok">0</td><td>0</td></tr>
+            </tbody>
+          </table>
+          <h3>Plain MySQL JDBC 실패 형태</h3>
+          <pre><code>SQLState=HY000
+vendorCode=1290
+errorClass=java.sql.SQLException
+errorMessage=The MySQL server is running with the --read-only option so it cannot execute this statement</code></pre>
+          <pre><code>SQLState=08S01
+errorClass=com.mysql.cj.jdbc.exceptions.CommunicationsException</code></pre>
+        </div>
+      </section>
+
+      <section id="interpretation">
+        <div class="secno">04</div>
+        <div>
+          <h2>해석</h2>
+          <div class="role-grid">
+            <div class="role">
+              <h3>Plain MySQL JDBC</h3>
+              <p>Switchover 중 read-only error와 timeout이 operation API까지 노출됐다.</p>
+            </div>
+            <div class="role">
+              <h3>AWS JDBC Wrapper bg</h3>
+              <p>같은 switchover window에서 SQL-level write failure를 회피했다.</p>
+            </div>
+          </div>
+          <p>따라서 SDK readiness API와 AWS JDBC Wrapper의 역할은 분리해서 봐야 한다.</p>
+          <table>
+            <thead><tr><th>구분</th><th>역할</th></tr></thead>
+            <tbody>
+            <tr><td>SDK readiness API</td><td>Switchover 전 deployment/resource 상태 확인, target DB instance `available` 확인, region/brand/fleet 단위 readiness 확인.</td></tr>
+            <tr><td>AWS JDBC Wrapper `bg` plugin</td><td>Runtime JDBC call 보호, switchover 중 connect/execute suspend, blue/green reroute, 기존 blue connection 정리.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="fanout">
+        <div class="secno">05</div>
+        <div>
+          <h2>Brand fan-out 확인</h2>
+          <p>Global API는 brand 기준 fan-out을 지원한다.</p>
+          <pre><code>POST /api/rds-bluegreen/sdk/fanout?region=KR&amp;brand={brand}
+POST /api/rds-bluegreen/sdk/fanout/operation-probe?region=KR&amp;brand={brand}</code></pre>
+          <table>
+            <thead><tr><th>Call</th><th>Targets</th><th>Succeeded</th><th>Failed</th></tr></thead>
+            <tbody>
+            <tr><td>readiness KIA</td><td>1</td><td class="ok">1</td><td>0</td></tr>
+            <tr><td>operation MYSQL KIA</td><td>1</td><td class="ok">1</td><td>0</td></tr>
+            <tr><td>operation WRAPPER KIA</td><td>1</td><td class="ok">1</td><td>0</td></tr>
+            <tr><td>readiness HYUNDAI</td><td>1</td><td class="ok">1</td><td>0</td></tr>
+            <tr><td>operation MYSQL HYUNDAI</td><td>1</td><td class="ok">1</td><td>0</td></tr>
+            <tr><td>operation WRAPPER HYUNDAI</td><td>1</td><td class="ok">1</td><td>0</td></tr>
+            <tr><td>readiness GENESIS</td><td>1</td><td class="ok">1</td><td>0</td></tr>
+            <tr><td>operation MYSQL GENESIS</td><td>1</td><td class="ok">1</td><td>0</td></tr>
+            <tr><td>operation WRAPPER GENESIS</td><td>1</td><td class="ok">1</td><td>0</td></tr>
+            <tr><td>readiness ALL</td><td>3</td><td class="ok">3</td><td>0</td></tr>
+            <tr><td>operation WRAPPER ALL</td><td>3</td><td class="ok">3</td><td>0</td></tr>
+            </tbody>
+          </table>
+          <p class="note">Global API가 brand 단위와 region 전체 단위로 local API를 fan-out할 수 있음을 확인했다.</p>
+        </div>
+      </section>
+    </article>
+  </div>
+</main>
+<script>
+  const root = document.documentElement;
+  const toggle = document.querySelector(".theme-toggle");
+  const saved = localStorage.getItem("rds-docs-theme");
+  if (saved === "dark") root.dataset.theme = "dark";
+  const sync = () => {
+    const dark = root.dataset.theme === "dark";
+    toggle.textContent = dark ? "라이트 모드" : "다크 모드";
+    toggle.setAttribute("aria-pressed", String(dark));
+  };
+  toggle.addEventListener("click", () => {
+    root.dataset.theme = root.dataset.theme === "dark" ? "" : "dark";
+    if (root.dataset.theme === "dark") localStorage.setItem("rds-docs-theme", "dark");
+    else localStorage.removeItem("rds-docs-theme");
+    sync();
+  });
+  sync();
+</script>
+</body>
+</html>
