@@ -268,12 +268,13 @@
   <div class="layout">
     <nav aria-label="문서 목차">
       <a href="#environment">00 검증 환경</a>
-      <a href="#readiness">01 Readiness 발견</a>
-      <a href="#api-decision">02 수집 API 판정</a>
-      <a href="#probe">03 Probe 방식</a>
-      <a href="#result">04 결과 요약</a>
-      <a href="#interpretation">05 해석</a>
-      <a href="#fanout">06 Brand fan-out</a>
+      <a href="#answer">01 검증 결론</a>
+      <a href="#readiness">02 Readiness 발견</a>
+      <a href="#api-decision">03 수집 API 판정</a>
+      <a href="#probe">04 Probe 방식</a>
+      <a href="#result">05 JDBC 결과</a>
+      <a href="#interpretation">06 해석</a>
+      <a href="#fanout">07 Brand fan-out</a>
     </nav>
     <article>
       <section id="environment">
@@ -299,8 +300,32 @@
         </div>
       </section>
 
-      <section id="readiness">
+      <section id="answer">
         <div class="secno">01</div>
+        <div>
+          <h2>검증 질문과 답</h2>
+          <p class="note">
+            질문은 하나다. “AWS SDK로 만든 수집 API가 완료라고 판단했을 때, 실제 RDS Blue/Green switchover를 진행해도 되는가?”
+          </p>
+          <table>
+            <thead><tr><th>항목</th><th>검증 결과</th></tr></thead>
+            <tbody>
+            <tr><td>구현한 것</td><td>AWS SDK로 RDS Blue/Green deployment, SOURCE/TARGET member status, target DB instance 상태, endpoint, DNS, fan-out 결과를 수집하는 readiness API.</td></tr>
+            <tr><td>완료 판정 조건</td><td><code>deploymentStatus=AVAILABLE</code>, <code>memberStatus=AVAILABLE</code>, <code>tasksReady=true</code>, <code>dbInstanceReady=true</code>, <code>ready=true</code>, <code>fanoutFailed=0</code>.</td></tr>
+            <tr><td>실제 행동</td><td>수집 API가 완료라고 판단한 뒤 RDS Blue/Green switchover를 실행했다.</td></tr>
+            <tr><td>실제 결과</td><td>AWS 최종 상태가 <code>SWITCHOVER_COMPLETED</code>로 끝났다.</td></tr>
+            <tr><td>판단</td><td>이번 Single RDS MySQL 검증에서는 SDK 수집 API를 pre-switchover gate로 사용할 수 있었다.</td></tr>
+            </tbody>
+          </table>
+          <p>
+            다만 이 결론은 “switchover 전에 진행 가능 여부를 판단하는 API”에 대한 결론이다.
+            Switchover 중 JDBC 호출을 안전하게 붙잡거나 재시도/우회하는 runtime 보호는 AWS JDBC Wrapper `bg` plugin의 역할이다.
+          </p>
+        </div>
+      </section>
+
+      <section id="readiness">
+        <div class="secno">02</div>
         <div>
           <h2>Deployment AVAILABLE만으로는 부족했다</h2>
           <p>첫 번째 switchover 시도는 `DescribeBlueGreenDeployments` 기준 deployment 상태가 `AVAILABLE`이었지만 실패했다.</p>
@@ -315,7 +340,7 @@ selected target DescribeDBInstances.DBInstanceStatus == available</code></pre>
       </section>
 
       <section id="api-decision">
-        <div class="secno">02</div>
+        <div class="secno">03</div>
         <div>
           <h2>수집 API가 완료라고 판단한 뒤 switchover했다</h2>
           <p>
@@ -348,7 +373,7 @@ fanoutFailed=0</code></pre>
       </section>
 
       <section id="probe">
-        <div class="secno">03</div>
+        <div class="secno">04</div>
         <div>
           <h2>Probe 방식</h2>
           <p>각 EC2 instance는 같은 local API로 Plain MySQL JDBC와 AWS JDBC Wrapper 경로를 모두 실행했다.</p>
@@ -364,9 +389,9 @@ POST /api/rds-bluegreen/sdk/operation-probe?driver=WRAPPER</code></pre>
       </section>
 
       <section id="result">
-        <div class="secno">04</div>
+        <div class="secno">05</div>
         <div>
-          <h2>결과 요약</h2>
+          <h2>JDBC 동작 결과</h2>
           <table>
             <thead>
             <tr>
@@ -399,7 +424,7 @@ errorClass=com.mysql.cj.jdbc.exceptions.CommunicationsException</code></pre>
       </section>
 
       <section id="interpretation">
-        <div class="secno">05</div>
+        <div class="secno">06</div>
         <div>
           <h2>해석</h2>
           <div class="role-grid">
@@ -424,7 +449,7 @@ errorClass=com.mysql.cj.jdbc.exceptions.CommunicationsException</code></pre>
       </section>
 
       <section id="fanout">
-        <div class="secno">06</div>
+        <div class="secno">07</div>
         <div>
           <h2>Brand fan-out 확인</h2>
           <p>Global API는 brand 기준 fan-out을 지원한다.</p>
