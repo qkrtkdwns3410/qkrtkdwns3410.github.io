@@ -313,10 +313,36 @@
             <tr><td>구현한 것</td><td>AWS SDK로 RDS Blue/Green deployment, SOURCE/TARGET member status, target DB instance 상태, endpoint, DNS, fan-out 결과를 수집하는 readiness API.</td></tr>
             <tr><td>완료 판정 조건</td><td><code>deploymentStatus=AVAILABLE</code>, <code>memberStatus=AVAILABLE</code>, <code>tasksReady=true</code>, <code>dbInstanceReady=true</code>, <code>ready=true</code>, <code>fanoutFailed=0</code>.</td></tr>
             <tr><td>실제 행동</td><td>수집 API가 완료라고 판단한 뒤 RDS Blue/Green switchover를 실행했다.</td></tr>
-            <tr><td>실제 결과</td><td>AWS 최종 상태가 <code>SWITCHOVER_COMPLETED</code>로 끝났다.</td></tr>
-            <tr><td>판단</td><td>이번 Single RDS MySQL 검증에서는 SDK 수집 API를 pre-switchover gate로 사용할 수 있었다.</td></tr>
+            <tr><td>실제 결과</td><td>10회 연속 검증 모두 AWS 최종 상태가 <code>SWITCHOVER_COMPLETED</code>로 끝났다.</td></tr>
+            <tr><td>사후 확인</td><td>각 회차 switchover 후 3개 EC2에서 MYSQL/WRAPPER <code>operation-probe</code>가 모두 성공했다.</td></tr>
+            <tr><td>판단</td><td>이번 Single RDS MySQL 10회 연속 검증에서는 SDK 수집 API를 pre-switchover gate로 사용할 수 있었다.</td></tr>
             </tbody>
           </table>
+          <div class="metrics">
+            <div class="metric"><strong>10/10</strong><span>SDK readiness true 후 switchover 실행</span></div>
+            <div class="metric"><strong>10/10</strong><span>최종 AWS 상태 SWITCHOVER_COMPLETED</span></div>
+            <div class="metric"><strong>0</strong><span>post operation-probe 실패</span></div>
+          </div>
+          <table>
+            <thead><tr><th>Cycle</th><th>Blue/Green deployment</th><th>최종 AWS 상태</th><th>Post probe</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td><code>bgd-6yrr9yuutcg5ttq9</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+              <tr><td>2</td><td><code>bgd-3jroqon2l78bhrb5</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+              <tr><td>3</td><td><code>bgd-gzubszwht6wzcw8b</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+              <tr><td>4</td><td><code>bgd-hb18podi4o61fvad</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+              <tr><td>5</td><td><code>bgd-nelo5vkpomxj9asx</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+              <tr><td>6</td><td><code>bgd-evs3uv3ljghipukt</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+              <tr><td>7</td><td><code>bgd-avbdeilqc6vuvgb5</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+              <tr><td>8</td><td><code>bgd-uhxxx2dmulr0prjn</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+              <tr><td>9</td><td><code>bgd-lhgythzcxjaqsta0</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+              <tr><td>10</td><td><code>bgd-fimo085tenuhwsz9</code></td><td><code>SWITCHOVER_COMPLETED</code></td><td>성공</td></tr>
+            </tbody>
+          </table>
+          <p class="note">
+            10회 모두에서 <code>deploymentStatus=AVAILABLE</code>, <code>memberStatus=AVAILABLE</code>인데
+            target DB instance가 <code>modifying</code>이라 <code>ready=false</code>인 구간이 관측됐다.
+            SDK 수집 API는 target DB instance가 <code>available</code>이 된 뒤에만 완료로 판단했다.
+          </p>
           <p>
             다만 이 결론은 “switchover 전에 진행 가능 여부를 판단하는 API”에 대한 결론이다.
             Switchover 중 JDBC 호출을 안전하게 붙잡거나 재시도/우회하는 runtime 보호는 AWS JDBC Wrapper `bg` plugin의 역할이다.
@@ -344,7 +370,7 @@ selected target DescribeDBInstances.DBInstanceStatus == available</code></pre>
         <div>
           <h2>수집 API가 완료라고 판단한 뒤 switchover했다</h2>
           <p>
-            두 번째 검증에서는 직접 만든 SDK 수집 API가 SOURCE/TARGET 상태를 다시 수집했고,
+            10회 연속 검증에서는 직접 만든 SDK 수집 API가 SOURCE/TARGET 상태를 다시 수집했고,
             switchover 전 target 기준 준비 조건이 모두 충족된 것을 확인했다.
           </p>
           <pre><code>deploymentStatus=AVAILABLE
